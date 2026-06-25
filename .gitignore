@@ -1,0 +1,38 @@
+# dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# build artifacts
+dist/
+build/
+coverage/
+
+# TypeScript
+*.tsbuildinfo
+
+# env files
+.env*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+npm-debug.log*
+
+# Vercel
+.vercel
+
+# leftover Vite / Express files (no longer used)
+vite.config.ts
+server.ts
+index.html
+src/
+metadata.json
+assets/
+package-lock.json
