@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { Rank, Title, Summary, Link } = body
+  const { Rank, Title, Summary, Link, Date } = body
 
   if (!Rank || !Title || !Summary || !Link) {
     return NextResponse.json(
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabase
     .from(TABLE_NAME)
-    .insert({ Rank, Title, Summary, Link })
+    .insert({ Rank, Title, Summary, Link, Date: Date ?? new globalThis.Date().toISOString().split('T')[0] })
     .select()
     .single()
 

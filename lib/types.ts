@@ -12,4 +12,5 @@ export interface WebhookPayload {
   Title: string
   Summary: string
   Link: string
+  Date?: string
 }
