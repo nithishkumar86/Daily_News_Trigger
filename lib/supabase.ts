@@ -16,4 +16,4 @@ export function getSupabase(): SupabaseClient {
   return _client
 }
 
-export const TABLE_NAME = process.env.SUPABASE_TABLE_NAME ?? 'news_articles'
+export const TABLE_NAME = process.env.SUPABASE_TABLE_NAME ?? 'Dialy_News_Trigger'

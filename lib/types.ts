@@ -8,8 +8,8 @@ export interface NewsArticle {
 }
 
 export interface WebhookPayload {
-  rank: number
-  title: string
-  summary: string
-  link: string
+  Rank: string
+  Title: string
+  Summary: string
+  Link: string
 }
