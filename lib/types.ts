@@ -1,9 +1,10 @@
 export interface NewsArticle {
   id: string
-  Rank: number
+  Rank: string
   Title: string
   Summary: string
   Link: string
+  Date: string
   created_at: string
 }
 
