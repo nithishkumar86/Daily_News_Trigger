@@ -22,8 +22,8 @@ export default function LatestPage() {
       const supabase = getBrowserSupabase()
       const { data: maxRow } = await supabase
         .from('ai_news')
-        .select('date')
-        .order('date', { ascending: false })
+        .select('Date')
+        .order('Date', { ascending: false })
         .limit(1)
         .single()
 
@@ -32,9 +32,9 @@ export default function LatestPage() {
       const { data } = await supabase
         .from('ai_news')
         .select('*')
-        .eq('date', maxRow.date)
-        .eq('topic', 'trending')
-        .order('rank', { ascending: true })
+        .eq('Date', maxRow.Date)
+        .eq('Topic', 'trending')
+        .order('Rank', { ascending: true })
 
       setItems(data ?? [])
     } finally {

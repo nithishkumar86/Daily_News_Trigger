@@ -1,12 +1,12 @@
 export interface NewsItem {
   id: string
-  rank: number
-  topic: string
-  title: string
-  summary: string
-  image: string | null
-  link: string
-  date: string
+  Rank: number
+  Topic: string
+  Title: string
+  Summary: string
+  Image: string | null
+  Link: string
+  Date: string
   created_at: string
 }
 
@@ -15,13 +15,13 @@ export type TableName = 'ai_news' | 'investment_news'
 export interface WebhookBody {
   table: TableName
   items: Array<{
-    rank: number
-    topic: string
-    title: string
-    summary: string
-    image?: string
-    link: string
-    date?: string
+    Rank: number
+    Topic: string
+    Title: string
+    Summary: string
+    Image?: string
+    Link: string
+    Date?: string
   }>
 }
 

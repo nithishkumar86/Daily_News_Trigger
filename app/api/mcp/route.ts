@@ -18,6 +18,10 @@ const TOOLS = [
           type: 'string',
           description: 'Rank of the news item (1 = most important, 5 = least important)',
         },
+        Topic: {
+          type: 'string',
+          description: 'Category or topic of the news item (e.g. AI, Finance, Technology)',
+        },
         Title: {
           type: 'string',
           description: 'Headline of the news article',
@@ -25,6 +29,10 @@ const TOOLS = [
         Summary: {
           type: 'string',
           description: 'Brief summary of the news article (2-3 sentences)',
+        },
+        Image: {
+          type: 'string',
+          description: 'Base64-encoded image or image URL for the news article (optional)',
         },
         Link: {
           type: 'string',
@@ -63,7 +71,7 @@ async function handleToolCall(name: string, args: Record<string, string>) {
     }
   }
 
-  const { Rank, Title, Summary, Link, Date: DateVal } = args
+  const { Rank, Topic, Title, Summary, Image, Link, Date: DateVal } = args
 
   let supabase
   try {
@@ -79,7 +87,7 @@ async function handleToolCall(name: string, args: Record<string, string>) {
   const today = new globalThis.Date().toISOString().split('T')[0]
   const { data, error } = await supabase
     .from(TABLE_NAME)
-    .insert({ Rank, Title, Summary, Link, Date: DateVal ?? today })
+    .insert({ Rank, Topic, Title, Summary, Image: Image ?? null, Link, Date: DateVal ?? today })
     .select()
     .single()
 

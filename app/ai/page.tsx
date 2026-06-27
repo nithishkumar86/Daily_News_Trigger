@@ -23,8 +23,8 @@ export default function AIPage() {
       const supabase = getBrowserSupabase()
       const { data: maxRow } = await supabase
         .from('ai_news')
-        .select('date')
-        .order('date', { ascending: false })
+        .select('Date')
+        .order('Date', { ascending: false })
         .limit(1)
         .single()
 
@@ -33,8 +33,8 @@ export default function AIPage() {
       const { data } = await supabase
         .from('ai_news')
         .select('*')
-        .eq('date', maxRow.date)
-        .order('rank', { ascending: true })
+        .eq('Date', maxRow.Date)
+        .order('Rank', { ascending: true })
 
       setItems(data ?? [])
     } finally {
@@ -52,8 +52,8 @@ export default function AIPage() {
     return () => { supabase.removeChannel(channel) }
   }, [loadItems])
 
-  const topics = ['all', ...Array.from(new Set(items.map(i => i.topic)))]
-  const filtered = activeTab === 'all' ? items : items.filter(i => i.topic === activeTab)
+  const topics = ['all', ...Array.from(new Set(items.map(i => i.Topic)))]
+  const filtered = activeTab === 'all' ? items : items.filter(i => i.Topic === activeTab)
 
   const handleToggle = (id: string) => {
     setCheckedIds(prev => {

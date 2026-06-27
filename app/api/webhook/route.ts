@@ -27,18 +27,18 @@ export async function POST(req: NextRequest) {
     const supabase = getServerSupabase()
 
     const rows = items.map(item => ({
-      rank: item.rank,
-      topic: item.topic,
-      title: item.title,
-      summary: item.summary,
-      image: item.image ?? null,
-      link: item.link,
-      date: item.date ?? today,
+      Rank: item.Rank,
+      Topic: item.Topic,
+      Title: item.Title,
+      Summary: item.Summary,
+      Image: item.Image ?? null,
+      Link: item.Link,
+      Date: item.Date ?? today,
     }))
 
     const { data, error } = await supabase
       .from(table)
-      .upsert(rows, { onConflict: 'date,rank' })
+      .upsert(rows, { onConflict: 'Date,Rank' })
       .select()
 
     if (error) {

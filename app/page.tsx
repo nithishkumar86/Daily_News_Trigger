@@ -5,9 +5,9 @@ import Marquee from '@/components/Marquee'
 import Link from 'next/link'
 
 interface HeadlineItem {
-  rank: number
-  title: string
-  topic: string
+  Rank: number
+  Title: string
+  Topic: string
 }
 
 export default function HomePage() {
@@ -19,8 +19,8 @@ export default function HomePage() {
         const supabase = getBrowserSupabase()
         const { data: maxRow } = await supabase
           .from('ai_news')
-          .select('date')
-          .order('date', { ascending: false })
+          .select('Date')
+          .order('Date', { ascending: false })
           .limit(1)
           .single()
 
@@ -28,9 +28,9 @@ export default function HomePage() {
 
         const { data } = await supabase
           .from('ai_news')
-          .select('rank, title, topic')
-          .eq('date', maxRow.date)
-          .order('rank', { ascending: true })
+          .select('Rank, Title, Topic')
+          .eq('Date', maxRow.Date)
+          .order('Rank', { ascending: true })
 
         setHeadlines(data ?? [])
       } catch {

@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     const systemPrompt = fs.readFileSync(formatFilePath, 'utf8')
 
     const userContent = selectedItems
-      .map(item => `Rank: ${item.rank}\nTitle: ${item.title}\nTopic: ${item.topic}\nSummary: ${item.summary}\nSource: ${item.link}`)
+      .map(item => `Rank: ${item.Rank}\nTitle: ${item.Title}\nTopic: ${item.Topic}\nSummary: ${item.Summary}\nSource: ${item.Link}`)
       .join('\n\n---\n\n')
 
     const messages: Message[] = [

@@ -1,33 +1,33 @@
 -- AI News Table
 CREATE TABLE IF NOT EXISTS ai_news (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  rank        INTEGER NOT NULL,
-  topic       TEXT NOT NULL,
-  title       TEXT NOT NULL,
-  summary     TEXT NOT NULL,
-  image       TEXT,
-  link        TEXT NOT NULL,
-  date        DATE NOT NULL DEFAULT CURRENT_DATE,
+  "Rank"      INTEGER NOT NULL,
+  "Topic"     TEXT NOT NULL,
+  "Title"     TEXT NOT NULL,
+  "Summary"   TEXT NOT NULL,
+  "Image"     TEXT,
+  "Link"      TEXT NOT NULL,
+  "Date"      DATE NOT NULL DEFAULT CURRENT_DATE,
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS ai_news_date_rank ON ai_news (date, rank);
-CREATE INDEX IF NOT EXISTS ai_news_date_topic ON ai_news (date, topic);
+CREATE UNIQUE INDEX IF NOT EXISTS ai_news_date_rank ON ai_news ("Date", "Rank");
+CREATE INDEX IF NOT EXISTS ai_news_date_topic ON ai_news ("Date", "Topic");
 
 -- Investment News Table
 CREATE TABLE IF NOT EXISTS investment_news (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  rank        INTEGER NOT NULL,
-  topic       TEXT NOT NULL,
-  title       TEXT NOT NULL,
-  summary     TEXT NOT NULL,
-  image       TEXT,
-  link        TEXT NOT NULL,
-  date        DATE NOT NULL DEFAULT CURRENT_DATE,
+  "Rank"      INTEGER NOT NULL,
+  "Topic"     TEXT NOT NULL,
+  "Title"     TEXT NOT NULL,
+  "Summary"   TEXT NOT NULL,
+  "Image"     TEXT,
+  "Link"      TEXT NOT NULL,
+  "Date"      DATE NOT NULL DEFAULT CURRENT_DATE,
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS investment_news_date_rank ON investment_news (date, rank);
+CREATE UNIQUE INDEX IF NOT EXISTS investment_news_date_rank ON investment_news ("Date", "Rank");
 
 -- Cleanup Log Table
 CREATE TABLE IF NOT EXISTS cleanup_log (

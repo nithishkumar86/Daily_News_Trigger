@@ -22,8 +22,8 @@ export default function InvestmentPage() {
       const supabase = getBrowserSupabase()
       const { data: maxRow } = await supabase
         .from('investment_news')
-        .select('date')
-        .order('date', { ascending: false })
+        .select('Date')
+        .order('Date', { ascending: false })
         .limit(1)
         .single()
 
@@ -32,8 +32,8 @@ export default function InvestmentPage() {
       const { data } = await supabase
         .from('investment_news')
         .select('*')
-        .eq('date', maxRow.date)
-        .order('rank', { ascending: true })
+        .eq('Date', maxRow.Date)
+        .order('Rank', { ascending: true })
 
       setItems(data ?? [])
     } finally {
