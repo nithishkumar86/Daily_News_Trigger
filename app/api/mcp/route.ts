@@ -43,18 +43,20 @@ const TOOLS = [
           description: 'Date of the news item in YYYY-MM-DD format (optional, defaults to today)',
         },
       },
-      required: ['Rank', 'Title', 'Summary', 'Link'],
+      required: ['Rank', 'Topic', 'Title', 'Summary', 'Image', 'Link', 'Date'],
     },
   },
 ]
 
 function validateArgs(args: Record<string, string>): string | null {
-  const { Rank, Title, Summary, Link } = args
-  if (!Rank || !Title || !Summary || !Link) return 'Missing required fields: Rank, Title, Summary, Link'
+  const { Rank, Topic, Title, Summary, Image, Link, Date: DateVal } = args
+  if (!Rank || !Topic || !Title || !Summary || !Image || !Link || !DateVal)
+    return 'Missing required fields: Rank, Topic, Title, Summary, Image, Link, Date'
   if (!['1', '2', '3', '4', '5'].includes(Rank)) return 'Rank must be "1" through "5"'
   if (Title.length > 300) return 'Title must be 300 characters or fewer'
   if (Summary.length > 1000) return 'Summary must be 1000 characters or fewer'
   if (!/^https?:\/\//i.test(Link)) return 'Link must start with http:// or https://'
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(DateVal)) return 'Date must be in YYYY-MM-DD format'
   return null
 }
 
