@@ -13,7 +13,6 @@ export interface NewsItem {
 export type TableName = 'ai_news' | 'investment_news'
 
 export interface WebhookBody {
-  table: TableName
   items: Array<{
     Rank: number
     Topic: string

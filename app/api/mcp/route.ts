@@ -1,46 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabase, TABLE_NAME } from '@/lib/supabase'
+import { getServerSupabase } from '@/lib/supabase'
 
 const SERVER_INFO = {
   name: 'daily-news-trigger',
   version: '1.0.0',
 }
 
+const AI_TOPICS = ['trending', 'ai', 'tools', 'models']
+const INVESTMENT_TOPICS = ['startup', 'investment', 'funding', 'company']
+const ALL_VALID_TOPICS = [...AI_TOPICS, ...INVESTMENT_TOPICS]
+
+function resolveTable(topic: string): 'ai_news' | 'investment_news' | null {
+  const t = topic.toLowerCase().trim()
+  if (AI_TOPICS.includes(t)) return 'ai_news'
+  if (INVESTMENT_TOPICS.includes(t)) return 'investment_news'
+  return null
+}
+
 const TOOLS = [
   {
     name: 'send_news',
     description:
-      'Send a single news item to the Daily News Trigger database. Call this once per news item, in rank order (1 through 5).',
+      'Send a single news item to the Daily News Trigger database. Call this once per news item, in rank order (1 through 10). Topic automatically routes to the correct table: trending/ai/tools/models → ai_news, startup/investment/funding/company → investment_news.',
     inputSchema: {
       type: 'object',
       properties: {
         Rank: {
           type: 'string',
-          description: 'Rank of the news item (1 = most important, 5 = least important)',
+          description: 'Rank of the news item (1 = most important, 10 = least important)',
         },
         Topic: {
           type: 'string',
-          description: 'Category or topic of the news item (e.g. AI, Finance, Technology)',
+          description: `Category of the news item. Must be one of: ${ALL_VALID_TOPICS.join(', ')}. AI news: trending, ai, tools, models. Investment news: startup, investment, funding, company.`,
         },
         Title: {
           type: 'string',
-          description: 'Headline of the news article',
+          description: 'Headline of the news article — must be under 20 words (e.g. "OpenAI releases GPT-6 with advanced reasoning")',
         },
         Summary: {
           type: 'string',
-          description: 'Brief summary of the news article (2-3 sentences)',
+          description: 'Detailed summary of the news article — minimum 500 characters. Write at least 4-5 sentences covering what happened, why it matters, and key details.',
         },
         Image: {
           type: 'string',
-          description: 'Base64-encoded image or image URL for the news article (optional)',
+          description: 'Base64-encoded image or publicly accessible image URL for the news article',
         },
         Link: {
           type: 'string',
-          description: 'URL link to the full news article',
+          description: 'Full URL to the original news article (must start with http:// or https://)',
         },
         Date: {
           type: 'string',
-          description: 'Date of the news item in YYYY-MM-DD format (optional, defaults to today)',
+          description: 'Date of the news item in YYYY-MM-DD format',
         },
       },
       required: ['Rank', 'Topic', 'Title', 'Summary', 'Image', 'Link', 'Date'],
@@ -52,9 +63,12 @@ function validateArgs(args: Record<string, string>): string | null {
   const { Rank, Topic, Title, Summary, Image, Link, Date: DateVal } = args
   if (!Rank || !Topic || !Title || !Summary || !Image || !Link || !DateVal)
     return 'Missing required fields: Rank, Topic, Title, Summary, Image, Link, Date'
-  if (!['1', '2', '3', '4', '5'].includes(Rank)) return 'Rank must be "1" through "5"'
-  if (Title.length > 300) return 'Title must be 300 characters or fewer'
-  if (Summary.length > 1000) return 'Summary must be 1000 characters or fewer'
+  const rankNum = parseInt(Rank)
+  if (isNaN(rankNum) || rankNum < 1 || rankNum > 10) return 'Rank must be a number between 1 and 10'
+  if (!resolveTable(Topic)) return `Topic "${Topic}" is invalid. Must be one of: ${ALL_VALID_TOPICS.join(', ')}`
+  const titleWordCount = Title.trim().split(/\s+/).length
+  if (titleWordCount >= 20) return `Title must be under 20 words (current: ${titleWordCount} words)`
+  if (Summary.length < 500) return `Summary must be at least 500 characters (current: ${Summary.length})`
   if (!/^https?:\/\//i.test(Link)) return 'Link must start with http:// or https://'
   if (!/^\d{4}-\d{2}-\d{2}$/.test(DateVal)) return 'Date must be in YYYY-MM-DD format'
   return null
@@ -74,10 +88,11 @@ async function handleToolCall(name: string, args: Record<string, string>) {
   }
 
   const { Rank, Topic, Title, Summary, Image, Link, Date: DateVal } = args
+  const table = resolveTable(Topic)!
 
   let supabase
   try {
-    supabase = getSupabase()
+    supabase = getServerSupabase()
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Supabase config error'
     return {
@@ -86,26 +101,21 @@ async function handleToolCall(name: string, args: Record<string, string>) {
     }
   }
 
-  const today = new globalThis.Date().toISOString().split('T')[0]
   const { data, error } = await supabase
-    .from(TABLE_NAME)
-    .insert({ Rank, Topic, Title, Summary, Image: Image ?? null, Link, Date: DateVal ?? today })
+    .from(table)
+    .insert({ Rank, Topic: Topic.toLowerCase().trim(), Title, Summary, Image, Link, Date: DateVal })
     .select()
     .single()
 
   if (error) {
     return {
-      content: [
-        { type: 'text', text: JSON.stringify({ success: false, error: error.message }) },
-      ],
+      content: [{ type: 'text', text: JSON.stringify({ success: false, error: error.message }) }],
       isError: true,
     }
   }
 
   return {
-    content: [
-      { type: 'text', text: JSON.stringify({ success: true, data }) },
-    ],
+    content: [{ type: 'text', text: JSON.stringify({ success: true, table, data }) }],
   }
 }
 
@@ -167,7 +177,7 @@ export async function GET() {
   return NextResponse.json({
     name: SERVER_INFO.name,
     version: SERVER_INFO.version,
-    description: 'MCP server for Daily News Trigger — sends news items to Supabase',
+    description: 'MCP server for Daily News Trigger — auto-routes news to ai_news or investment_news based on Topic',
     tools: TOOLS.map((t) => ({ name: t.name, description: t.description })),
   })
 }
