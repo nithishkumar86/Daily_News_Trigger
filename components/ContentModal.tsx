@@ -29,10 +29,10 @@ export default function ContentModal({
   if (!isOpen) return null
 
   const firstItem = selectedItems[0]
-  const imageSrc = firstItem?.image
-    ? firstItem.image.startsWith('data:')
-      ? firstItem.image
-      : `data:image/jpeg;base64,${firstItem.image}`
+  const imageSrc = firstItem?.Image
+    ? firstItem.Image.startsWith('data:')
+      ? firstItem.Image
+      : `data:image/jpeg;base64,${firstItem.Image}`
     : null
 
   const handleCopyText = async () => {
@@ -83,7 +83,7 @@ export default function ContentModal({
           {/* Image Section */}
           {imageSrc && (
             <div className="space-y-2">
-              <img src={imageSrc} alt={firstItem?.title} className="w-full rounded-xl object-cover max-h-64" />
+              <img src={imageSrc} alt={firstItem?.Title} className="w-full rounded-xl object-cover max-h-64" />
               <button
                 onClick={handleCopyImage}
                 className="text-xs px-3 py-1 rounded-lg bg-[#1a1a2e] text-[#94a3b8] hover:text-[#f1f5f9] transition-colors"
