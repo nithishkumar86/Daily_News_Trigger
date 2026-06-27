@@ -13,7 +13,6 @@ export async function GET() {
       .order('Rank', { ascending: true })
 
     if (error) {
-      console.error('[news] Supabase fetch error:', error.message)
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
@@ -22,7 +21,9 @@ export async function GET() {
       { headers: { 'Cache-Control': 's-maxage=30, stale-while-revalidate=10' } }
     )
   } catch (err) {
-    console.error('[news] Unexpected error:', err)
-    return NextResponse.json({ success: false, error: 'Failed to fetch articles' }, { status: 500 })
+    return NextResponse.json(
+      { success: false, error: err instanceof Error ? err.message : 'Failed to fetch articles' },
+      { status: 500 }
+    )
   }
 }

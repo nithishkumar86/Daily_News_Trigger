@@ -1,159 +1,114 @@
 'use client'
+import { useEffect, useState } from 'react'
+import { getBrowserSupabase } from '@/lib/supabase'
+import Marquee from '@/components/Marquee'
+import Link from 'next/link'
 
-import { useEffect, useState, useCallback } from 'react'
-import { CheckCircle, XCircle, RefreshCw, ExternalLink } from 'lucide-react'
-import type { NewsArticle } from '@/lib/types'
+interface HeadlineItem {
+  rank: number
+  title: string
+  topic: string
+}
 
-const MCP_URL = 'https://daily-news-trigger.vercel.app/api/mcp'
-
-export default function Page() {
-  const [articles, setArticles] = useState<NewsArticle[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-
-  const fetchArticles = useCallback(async () => {
-    try {
-      const res = await fetch('/api/news')
-      const json = await res.json()
-      if (json.success) {
-        setArticles(json.data)
-        setError(null)
-      } else {
-        setError(json.error)
-      }
-    } catch {
-      setError('Failed to reach /api/news')
-    } finally {
-      setLoading(false)
-      setLastUpdated(new Date())
-    }
-  }, [])
+export default function HomePage() {
+  const [headlines, setHeadlines] = useState<HeadlineItem[]>([])
 
   useEffect(() => {
-    fetchArticles()
-    const interval = setInterval(fetchArticles, 30000)
-    return () => clearInterval(interval)
-  }, [fetchArticles])
+    async function loadHeadlines() {
+      try {
+        const supabase = getBrowserSupabase()
+        const { data: maxRow } = await supabase
+          .from('ai_news')
+          .select('date')
+          .order('date', { ascending: false })
+          .limit(1)
+          .single()
 
-  const todayLabel = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
+        if (!maxRow) return
+
+        const { data } = await supabase
+          .from('ai_news')
+          .select('rank, title, topic')
+          .eq('date', maxRow.date)
+          .order('rank', { ascending: true })
+
+        setHeadlines(data ?? [])
+      } catch {
+        // No data yet — headlines stay empty
+      }
+    }
+
+    loadHeadlines()
+
+    // Passive cleanup trigger (runs only on Sundays, idempotent)
+    fetch('/api/check-cleanup').catch(() => {})
+  }, [])
 
   return (
-    <main className="max-w-5xl mx-auto px-4 py-10 space-y-8">
+    <div className="min-h-screen bg-[#0d0d1a]">
+      {/* Hero Section */}
+      <section className="relative min-h-[80vh] flex flex-col items-center justify-center overflow-hidden">
+        {/* Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0d0d1a] via-[#1a1a2e] to-[#0d0d1a]" />
+        <div className="absolute inset-0 opacity-5 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#7c3aed] via-transparent to-transparent" />
 
-      {/* Header */}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-white">Daily AI News</h1>
-        <p className="text-neutral-500 text-sm">{todayLabel}</p>
-      </div>
-
-      {/* MCP URL */}
-      <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-2">
-        <p className="text-xs text-neutral-500 uppercase tracking-widest font-medium">MCP Server — connect Claude or ChatGPT</p>
-        <code className="block text-green-400 text-sm font-mono bg-neutral-800 px-4 py-3 rounded-lg break-all">
-          {MCP_URL}
-        </code>
-        <p className="text-xs text-neutral-600">
-          Tool: <code className="text-neutral-400">send_news</code> — fields: Rank, Title, Summary, Link, Date (optional)
-        </p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
-          <p className="text-xs text-neutral-500 uppercase tracking-widest">Today&apos;s Articles</p>
-          <p className="text-3xl font-bold text-white mt-1">{articles.length}</p>
-        </div>
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
-          <p className="text-xs text-neutral-500 uppercase tracking-widest">Supabase</p>
-          <div className="flex items-center gap-2 mt-2">
-            {error ? (
-              <>
-                <XCircle className="w-4 h-4 text-red-400" />
-                <span className="text-red-400 text-sm font-medium">Error</span>
-              </>
-            ) : (
-              <>
-                <CheckCircle className="w-4 h-4 text-green-400" />
-                <span className="text-green-400 text-sm font-medium">Connected</span>
-              </>
-            )}
+        {/* Content */}
+        <div className="relative z-10 text-center space-y-6 px-4 max-w-4xl mx-auto">
+          <div className="inline-flex items-center gap-2 bg-[#7c3aed]/10 border border-[#7c3aed]/20 rounded-full px-4 py-1.5 text-sm text-[#7c3aed] font-medium">
+            🤖 AI-Powered Daily News
           </div>
-          {lastUpdated && (
-            <p className="text-xs text-neutral-700 mt-1">{lastUpdated.toLocaleTimeString()}</p>
-          )}
-        </div>
-      </div>
-
-      {/* News Table */}
-      <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800">
-          <h2 className="text-sm font-semibold text-white">Today&apos;s News</h2>
-          <button
-            onClick={fetchArticles}
-            className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-white transition-colors"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Refresh
-          </button>
-        </div>
-
-        {loading ? (
-          <p className="px-5 py-10 text-center text-neutral-600 text-sm">Loading...</p>
-        ) : error ? (
-          <p className="px-5 py-10 text-center text-red-400 text-sm">{error}</p>
-        ) : articles.length === 0 ? (
-          <p className="px-5 py-10 text-center text-neutral-600 text-sm">
-            No articles for today — use the MCP tool to send news items.
+          <h1 className="text-5xl sm:text-7xl font-bold text-[#f1f5f9] leading-tight">
+            AI Digital{' '}
+            <span className="text-[#7c3aed]">Tamizah</span>
+          </h1>
+          <p className="text-xl text-[#94a3b8] max-w-2xl mx-auto leading-relaxed">
+            Your Daily Dose of AI Intelligence — curated by AI, delivered daily
           </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-neutral-800 text-left">
-                  <th className="px-4 py-3 text-xs font-medium text-neutral-500 uppercase tracking-widest w-16">Rank</th>
-                  <th className="px-4 py-3 text-xs font-medium text-neutral-500 uppercase tracking-widest w-56">Title</th>
-                  <th className="px-4 py-3 text-xs font-medium text-neutral-500 uppercase tracking-widest">Summary</th>
-                  <th className="px-4 py-3 text-xs font-medium text-neutral-500 uppercase tracking-widest w-16 text-center">Link</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-800">
-                {articles.map((article) => (
-                  <tr key={article.id} className="hover:bg-neutral-800/40 transition-colors">
-                    <td className="px-4 py-4">
-                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-500/20 text-blue-400 text-xs font-bold font-mono">
-                        {article.Rank}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <p className="font-medium text-white leading-snug line-clamp-2">{article.Title}</p>
-                    </td>
-                    <td className="px-4 py-4">
-                      <p className="text-neutral-400 leading-relaxed line-clamp-2">{article.Summary}</p>
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <a
-                        href={article.Link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex text-neutral-600 hover:text-blue-400 transition-colors"
-                        aria-label="Open article"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex flex-wrap gap-4 justify-center pt-4">
+            <Link
+              href="/latest"
+              className="px-6 py-3 bg-[#7c3aed] text-white rounded-xl font-medium hover:bg-purple-600 transition-all"
+            >
+              Latest Trending
+            </Link>
+            <Link
+              href="/ai"
+              className="px-6 py-3 bg-[#1a1a2e] border border-[#1e293b] text-[#f1f5f9] rounded-xl font-medium hover:border-[#7c3aed] transition-all"
+            >
+              AI News
+            </Link>
+            <Link
+              href="/investment"
+              className="px-6 py-3 bg-[#1a1a2e] border border-[#1e293b] text-[#f1f5f9] rounded-xl font-medium hover:border-[#3b82f6] transition-all"
+            >
+              Investment News
+            </Link>
           </div>
-        )}
-      </div>
-    </main>
+        </div>
+      </section>
+
+      {/* Marquee Ticker */}
+      {headlines.length > 0 && (
+        <section className="bg-[#13131f] border-y border-[#1e293b] py-3">
+          <Marquee items={headlines} />
+        </section>
+      )}
+
+      {/* Quick Stats */}
+      <section className="max-w-7xl mx-auto px-4 py-16">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          {[
+            { label: 'Daily AI News', value: '5–10+', color: '#7c3aed' },
+            { label: 'Investment Stories', value: '5+', color: '#3b82f6' },
+            { label: 'Updated', value: 'Daily 9AM', color: '#10b981' },
+          ].map(stat => (
+            <div key={stat.label} className="bg-[#13131f] border border-[#1e293b] rounded-xl p-6 text-center">
+              <div className="text-3xl font-bold" style={{ color: stat.color }}>{stat.value}</div>
+              <div className="text-[#94a3b8] text-sm mt-1">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
   )
 }

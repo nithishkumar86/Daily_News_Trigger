@@ -36,3 +36,9 @@ src/
 metadata.json
 assets/
 package-lock.json
+
+# Claude Code local config (not project source)
+.claude/
+
+# local design/planning files
+workflow.excalidraw
