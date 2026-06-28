@@ -7,7 +7,7 @@ export interface NewsItem {
   Image: string | null
   Link: string
   Date: string
-  created_at: string
+  created_at?: string
 }
 
 export type TableName = 'ai_news' | 'investment_news'
