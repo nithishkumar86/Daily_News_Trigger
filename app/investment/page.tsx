@@ -13,7 +13,7 @@ const SKELETON_KEYS = [0, 1, 2, 3, 4, 5]
 const MAX_REFINEMENT_LENGTH = 2000
 
 function getTabClass(active: boolean): string {
-  return `min-h-[36px] py-1.5 px-4 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+  return `min-h-[44px] py-2 px-5 rounded-full text-base font-medium transition-all whitespace-nowrap ${
     active ? 'bg-[#3b82f6] text-white' : 'bg-[#1a1a2e] text-[#94a3b8] hover:bg-[#1e293b]'
   }`
 }
@@ -205,6 +205,7 @@ export default function InvestmentPage() {
                   key={topic}
                   onClick={() => setActiveTab(topic)}
                   className={getTabClass(activeTab === topic)}
+                  data-testid="topic-tab-desktop"
                 >
                   {topic}
                 </button>
@@ -215,7 +216,7 @@ export default function InvestmentPage() {
 
         {/* Content area */}
         {loading ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-2xl lg:max-w-none mx-auto">
+          <div className="flex flex-col gap-6 max-w-5xl mx-auto">
             {SKELETON_KEYS.map(i => (
               <div key={i} className="bg-[#13131f] border border-[#1e293b] rounded-xl h-96 animate-pulse" />
             ))}
@@ -238,7 +239,7 @@ export default function InvestmentPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-2xl lg:max-w-none mx-auto">
+          <div className="flex flex-col gap-6 max-w-5xl mx-auto">
             {filtered.map(item => (
               <NewsCard key={item.id} item={item} checked={checkedIds.has(item.id)} onToggle={handleToggle} />
             ))}

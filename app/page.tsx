@@ -40,8 +40,11 @@ export default function HomePage() {
 
     loadHeadlines()
 
-    // Passive cleanup trigger (runs only on Sundays, idempotent)
-    fetch('/api/check-cleanup').catch(() => {})
+    // Deferred — non-critical, runs only on Sundays, idempotent
+    const cleanupTimer = setTimeout(() => {
+      fetch('/api/check-cleanup').catch(() => {})
+    }, 500)
+    return () => clearTimeout(cleanupTimer)
   }, [])
 
   return (
@@ -54,32 +57,32 @@ export default function HomePage() {
 
         {/* Content */}
         <div className="relative z-10 text-center space-y-5 sm:space-y-6 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto w-full">
-          <div className="inline-flex items-center gap-2 bg-[#7c3aed]/10 border border-[#7c3aed]/20 rounded-full px-4 py-1.5 text-xs sm:text-sm text-[#7c3aed] font-medium leading-snug">
+          <div className="inline-flex items-center gap-2 bg-[#7c3aed]/10 border border-[#7c3aed]/20 rounded-full px-4 py-1.5 text-base sm:text-lg text-[#7c3aed] font-medium leading-snug">
             🤖 AI-Powered Daily News
           </div>
-          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-[#f1f5f9] leading-tight">
+          <h1 className="text-5xl sm:text-6xl lg:text-8xl font-bold text-[#f1f5f9] leading-tight">
             AI Digital{' '}
             <span className="text-[#7c3aed]">Tamizah</span>
           </h1>
-          <p className="text-base sm:text-xl text-[#94a3b8] max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xl sm:text-2xl text-[#94a3b8] max-w-2xl mx-auto leading-relaxed">
             Your Daily Dose of AI Intelligence — curated by AI, delivered daily
           </p>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center pt-2 sm:pt-4 w-full">
             <Link
               href="/latest"
-              className="min-h-[48px] flex items-center justify-center px-6 py-3 bg-[#7c3aed] text-white rounded-xl font-medium hover:bg-purple-600 transition-all w-full sm:w-auto"
+              className="min-h-[56px] flex items-center justify-center px-8 py-4 bg-[#7c3aed] text-white text-lg rounded-xl font-medium hover:bg-purple-600 transition-all w-full sm:w-auto"
             >
               Latest Trending
             </Link>
             <Link
               href="/ai"
-              className="min-h-[48px] flex items-center justify-center px-6 py-3 bg-[#1a1a2e] border border-[#1e293b] text-[#f1f5f9] rounded-xl font-medium hover:border-[#7c3aed] transition-all w-full sm:w-auto"
+              className="min-h-[56px] flex items-center justify-center px-8 py-4 bg-[#1a1a2e] border border-[#1e293b] text-[#f1f5f9] text-lg rounded-xl font-medium hover:border-[#7c3aed] transition-all w-full sm:w-auto"
             >
               AI News
             </Link>
             <Link
               href="/investment"
-              className="min-h-[48px] flex items-center justify-center px-6 py-3 bg-[#1a1a2e] border border-[#1e293b] text-[#f1f5f9] rounded-xl font-medium hover:border-[#3b82f6] transition-all w-full sm:w-auto"
+              className="min-h-[56px] flex items-center justify-center px-8 py-4 bg-[#1a1a2e] border border-[#1e293b] text-[#f1f5f9] text-lg rounded-xl font-medium hover:border-[#3b82f6] transition-all w-full sm:w-auto"
             >
               Investment News
             </Link>
@@ -109,10 +112,10 @@ export default function HomePage() {
               className="bg-[#13131f] border border-[#1e293b] rounded-xl p-6 sm:p-8 text-center flex flex-col items-center gap-2"
             >
               <span className="text-2xl" aria-hidden="true">{stat.icon}</span>
-              <div className="text-4xl lg:text-5xl font-bold" style={{ color: stat.color }}>
+              <div className="text-5xl lg:text-6xl font-bold" style={{ color: stat.color }}>
                 {stat.value}
               </div>
-              <div className="text-[#94a3b8] text-sm mt-1">{stat.label}</div>
+              <div className="text-[#94a3b8] text-xl mt-1">{stat.label}</div>
             </div>
           ))}
         </div>

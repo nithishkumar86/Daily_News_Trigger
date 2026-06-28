@@ -1,4 +1,5 @@
 'use client'
+import { useState } from 'react'
 import { NewsItem } from '@/lib/types'
 import { ExternalLink } from 'lucide-react'
 
@@ -9,6 +10,7 @@ interface NewsCardProps {
 }
 
 export default function NewsCard({ item, checked, onToggle }: NewsCardProps) {
+  const [expanded, setExpanded] = useState(false)
   const imageSrc = item.Image && !item.Image.startsWith('http')
     ? item.Image.startsWith('data:')
       ? item.Image
@@ -30,7 +32,7 @@ export default function NewsCard({ item, checked, onToggle }: NewsCardProps) {
             <span className="text-[#2d2d4e] text-6xl font-bold">#{item.Rank}</span>
           </div>
         )}
-        <span className="absolute top-3 left-3 bg-[#7c3aed] text-white text-sm font-bold px-3 py-1 rounded-full shadow-lg">
+        <span className="absolute top-3 left-3 bg-[#7c3aed] text-white text-base font-bold px-3 py-1 rounded-full shadow-lg">
           #{item.Rank}
         </span>
       </div>
@@ -38,25 +40,31 @@ export default function NewsCard({ item, checked, onToggle }: NewsCardProps) {
       {/* Content */}
       <div className="p-4 sm:p-6 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium bg-[#7c3aed]/10 text-[#7c3aed] px-3 py-1 rounded-full uppercase tracking-wider">
+          <span className="text-lg font-medium bg-[#7c3aed]/10 text-[#7c3aed] px-3 py-1 rounded-full uppercase tracking-wider">
             {item.Topic}
           </span>
-          <span className="text-sm text-[#94a3b8]">{item.Date}</span>
+          <span className="text-lg text-[#94a3b8]">{item.Date}</span>
         </div>
-        <h3 className="text-[#f1f5f9] font-semibold text-xl leading-snug line-clamp-3">{item.Title}</h3>
-        <p className="text-[#94a3b8] text-base leading-relaxed line-clamp-6">{item.Summary}</p>
+        <h3 className="text-[#f1f5f9] font-semibold text-3xl leading-snug line-clamp-3">{item.Title}</h3>
+        <p className={`text-[#94a3b8] text-xl leading-relaxed ${expanded ? '' : 'line-clamp-4'}`}>{item.Summary}</p>
+        <button
+          onClick={() => setExpanded(prev => !prev)}
+          className="text-[#7c3aed] text-base font-medium hover:text-purple-400 transition-colors -mt-1"
+        >
+          {expanded ? 'See less ▲' : 'See more ▼'}
+        </button>
         <div className="flex items-center justify-between pt-1">
           <a
             href={item.Link}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 text-sm text-[#3b82f6] hover:text-blue-400 transition-colors"
+            className="flex items-center gap-2 text-lg text-[#3b82f6] hover:text-blue-400 transition-colors"
           >
-            Read more <ExternalLink size={13} />
+            Read more <ExternalLink size={18} />
           </a>
           <button
             onClick={() => onToggle(item.id)}
-            className={`flex items-center gap-1.5 text-sm px-4 py-1.5 rounded-full border transition-all ${
+            className={`flex items-center gap-1.5 text-lg px-5 py-2 rounded-full border transition-all ${
               checked
                 ? 'bg-[#7c3aed] border-[#7c3aed] text-white'
                 : 'border-[#1e293b] text-[#94a3b8] hover:border-[#7c3aed] hover:text-[#7c3aed]'

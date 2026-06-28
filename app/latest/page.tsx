@@ -175,7 +175,7 @@ export default function LatestPage() {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-2xl lg:max-w-7xl mx-auto">
+          <div className="flex flex-col gap-6 max-w-5xl mx-auto">
             {SKELETON_KEYS.map(i => (
               <div key={i} className="bg-[#13131f] border border-[#1e293b] rounded-xl h-96 animate-pulse" />
             ))}
@@ -187,7 +187,7 @@ export default function LatestPage() {
             <p className="text-sm mt-2 text-center max-w-xs">Check back after 9 AM when the AI agent runs.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-2xl lg:max-w-7xl mx-auto">
+          <div className="flex flex-col gap-6 max-w-5xl mx-auto">
             {items.map(item => (
               <NewsCard key={item.id} item={item} checked={checkedIds.has(item.id)} onToggle={handleToggle} />
             ))}
