@@ -9,6 +9,7 @@ import ContentModal from '@/components/ContentModal'
 export default function InvestmentPage() {
   const [items, setItems] = useState<NewsItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState('all')
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const [selectedFormat, setSelectedFormat] = useState<ContentFormat | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -94,6 +95,11 @@ export default function InvestmentPage() {
     setIsGenerating(false)
   }
 
+  const FIXED_INV_TOPICS = ['all', 'startup', 'funding', 'investment', 'company']
+  const dbTopics = Array.from(new Set(items.map(i => i.Topic)))
+  const topics = [...FIXED_INV_TOPICS, ...dbTopics.filter(t => !FIXED_INV_TOPICS.includes(t))]
+  const filtered = activeTab === 'all' ? items : items.filter(i => i.Topic === activeTab)
+
   return (
     <div className="min-h-screen bg-[#0d0d1a] pb-32">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -102,13 +108,31 @@ export default function InvestmentPage() {
           <p className="text-[#94a3b8] mt-1">Startup funding, VC deals, and company news</p>
         </div>
 
+        {!loading && items.length > 0 && (
+          <div className="flex gap-2 mb-6 overflow-x-auto pb-1 scrollbar-none">
+            {topics.map(topic => (
+              <button
+                key={topic}
+                onClick={() => setActiveTab(topic)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap flex-shrink-0 ${
+                  activeTab === topic
+                    ? 'bg-[#7c3aed] text-white'
+                    : 'bg-[#1a1a2e] text-[#94a3b8] hover:bg-[#1e293b]'
+                }`}
+              >
+                {topic}
+              </button>
+            ))}
+          </div>
+        )}
+
         {loading ? (
           <div className="flex flex-col gap-6 max-w-4xl mx-auto">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="bg-[#13131f] border border-[#1e293b] rounded-xl h-96 animate-pulse" />
             ))}
           </div>
-        ) : items.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="text-center py-24 text-[#94a3b8]">
             <div className="text-5xl mb-4">💰</div>
             <p className="text-lg">No investment news yet today.</p>
@@ -116,7 +140,7 @@ export default function InvestmentPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-6 max-w-4xl mx-auto">
-            {items.map(item => (
+            {filtered.map(item => (
               <NewsCard key={item.id} item={item} checked={checkedIds.has(item.id)} onToggle={handleToggle} />
             ))}
           </div>

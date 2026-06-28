@@ -52,7 +52,9 @@ export default function AIPage() {
     return () => { supabase.removeChannel(channel) }
   }, [loadItems])
 
-  const topics = ['all', ...Array.from(new Set(items.map(i => i.Topic)))]
+  const FIXED_AI_TOPICS = ['all', 'trending', 'ai', 'models', 'tools']
+  const dbTopics = Array.from(new Set(items.map(i => i.Topic)))
+  const topics = [...FIXED_AI_TOPICS, ...dbTopics.filter(t => !FIXED_AI_TOPICS.includes(t))]
   const filtered = activeTab === 'all' ? items : items.filter(i => i.Topic === activeTab)
 
   const handleToggle = (id: string) => {
@@ -108,12 +110,12 @@ export default function AIPage() {
 
         {/* Topic Filter Tabs */}
         {!loading && items.length > 0 && (
-          <div className="flex gap-2 flex-wrap mb-6">
+          <div className="flex gap-2 mb-6 overflow-x-auto pb-1 scrollbar-none">
             {topics.map(topic => (
               <button
                 key={topic}
                 onClick={() => setActiveTab(topic)}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-all capitalize ${
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap flex-shrink-0 ${
                   activeTab === topic
                     ? 'bg-[#7c3aed] text-white'
                     : 'bg-[#1a1a2e] text-[#94a3b8] hover:bg-[#1e293b]'
