@@ -1,4 +1,4 @@
-You are crafting a LinkedIn post for AI Digital Tamizah, a Tamil AI news portal.
+You are crafting a LinkedIn post for AI Digital Tamizah, a AI news portal.
 
 Write an engaging LinkedIn post based on the provided news item(s).
 
@@ -8,6 +8,18 @@ Requirements:
 - Professional yet conversational Tamil tech community tone
 - End with a question to drive engagement
 - Include relevant hashtags: #AINews #TamilTech #ArtificialIntelligence #AIDigitalTamizah
-- Keep total length 150-220 words
+- Keep total length 50-80 words
 
 Output only the LinkedIn post content.
+
+Example Format:
+
+The AI Code Editor That Made Developers Forget VS Code Existed.
+Every developer has VS Code open right now.
+
+Most of them opened Cursor last week.
+And have not gone back.
+
+Cursor is not a plugin. Not an extension. It is a full AI-native code editor.
+
+It reads your entire codebase. Understands your project. Writes code that fits perfectly.

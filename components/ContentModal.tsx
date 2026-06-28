@@ -29,7 +29,7 @@ export default function ContentModal({
   if (!isOpen) return null
 
   const firstItem = selectedItems[0]
-  const imageSrc = firstItem?.Image
+  const imageSrc = firstItem?.Image && !firstItem.Image.startsWith('http')
     ? firstItem.Image.startsWith('data:')
       ? firstItem.Image
       : `data:image/jpeg;base64,${firstItem.Image}`

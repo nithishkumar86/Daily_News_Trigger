@@ -103,9 +103,9 @@ export default function InvestmentPage() {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="flex flex-col gap-6 max-w-4xl mx-auto">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-[#13131f] border border-[#1e293b] rounded-xl h-80 animate-pulse" />
+              <div key={i} className="bg-[#13131f] border border-[#1e293b] rounded-xl h-96 animate-pulse" />
             ))}
           </div>
         ) : items.length === 0 ? (
@@ -115,7 +115,7 @@ export default function InvestmentPage() {
             <p className="text-sm mt-2">Check back after 9 AM when the AI agent runs.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="flex flex-col gap-6 max-w-4xl mx-auto">
             {items.map(item => (
               <NewsCard key={item.id} item={item} checked={checkedIds.has(item.id)} onToggle={handleToggle} />
             ))}
