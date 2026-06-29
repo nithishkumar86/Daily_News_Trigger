@@ -15,9 +15,8 @@ export default function NewsCard({ item, checked, onToggle }: NewsCardProps) {
 
   const imageSrc = (() => {
     if (!item.Image) return null
-    if (item.Image.startsWith('http')) return item.Image
     if (item.Image.startsWith('data:')) return item.Image
-    // Normalize base64 padding — length must be a multiple of 4
+    // Normalize raw base64 padding — length must be a multiple of 4
     const stripped = item.Image.replace(/=+$/, '')
     const pad = stripped.length % 4
     const b64 = pad === 0 ? stripped : stripped + '='.repeat(4 - pad)
@@ -37,9 +36,11 @@ export default function NewsCard({ item, checked, onToggle }: NewsCardProps) {
       <div className="relative h-72 sm:h-96">
         {showImage ? (
           <img
-            src={imageSrc}
+            src={imageSrc!}
             alt={item.Title}
             className="w-full h-full object-cover"
+            loading="lazy"
+            decoding="async"
             onError={() => setImgError(true)}
           />
         ) : (
