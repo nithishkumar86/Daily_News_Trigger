@@ -8,6 +8,7 @@ interface ContentGeneratorPanelProps {
   isGenerating: boolean
   selectedFormat: ContentFormat | null
   onSelectFormat: (format: ContentFormat) => void
+  excludeFormats?: ContentFormat[]
 }
 
 const formats: { key: ContentFormat; label: string; icon: string }[] = [
@@ -23,8 +24,13 @@ export default function ContentGeneratorPanel({
   isGenerating,
   selectedFormat,
   onSelectFormat,
+  excludeFormats,
 }: ContentGeneratorPanelProps) {
   if (selectedCount === 0) return null
+
+  const visibleFormats = excludeFormats?.length
+    ? formats.filter(f => !excludeFormats.includes(f.key))
+    : formats
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#13131f] border-t border-[#1e293b] p-4 shadow-2xl">
@@ -35,7 +41,7 @@ export default function ContentGeneratorPanel({
               <span className="text-[#7c3aed] font-bold">{selectedCount}</span> item{selectedCount > 1 ? 's' : ''} selected
             </span>
             <div className="flex gap-2">
-              {formats.map(f => (
+              {visibleFormats.map(f => (
                 <button
                   key={f.key}
                   onClick={() => onSelectFormat(f.key)}

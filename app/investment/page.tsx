@@ -254,6 +254,7 @@ export default function InvestmentPage() {
         isGenerating={isGenerating}
         selectedFormat={selectedFormat}
         onSelectFormat={setSelectedFormat}
+        excludeFormats={['newsletter']}
       />
 
       <ContentModal

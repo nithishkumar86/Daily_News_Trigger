@@ -5,8 +5,8 @@ import { ExternalLink } from 'lucide-react'
 
 interface NewsCardProps {
   item: NewsItem
-  checked: boolean
-  onToggle: (id: string) => void
+  checked?: boolean
+  onToggle?: (id: string) => void
 }
 
 export default function NewsCard({ item, checked, onToggle }: NewsCardProps) {
@@ -31,6 +31,7 @@ export default function NewsCard({ item, checked, onToggle }: NewsCardProps) {
       className={`bg-[#13131f] border rounded-xl overflow-hidden transition-all ${
         checked ? 'border-[#7c3aed] shadow-lg shadow-purple-900/20' : 'border-[#1e293b]'
       }`}
+
     >
       {/* Image */}
       <div className="relative h-72 sm:h-96">
@@ -76,16 +77,18 @@ export default function NewsCard({ item, checked, onToggle }: NewsCardProps) {
           >
             Read more <ExternalLink size={18} />
           </a>
-          <button
-            onClick={() => onToggle(item.id)}
-            className={`flex items-center gap-1.5 text-lg px-5 py-2 rounded-full border transition-all ${
-              checked
-                ? 'bg-[#7c3aed] border-[#7c3aed] text-white'
-                : 'border-[#1e293b] text-[#94a3b8] hover:border-[#7c3aed] hover:text-[#7c3aed]'
-            }`}
-          >
-            {checked ? '✓ Selected' : 'Select'}
-          </button>
+          {onToggle && (
+            <button
+              onClick={() => onToggle(item.id)}
+              className={`flex items-center gap-1.5 text-lg px-5 py-2 rounded-full border transition-all ${
+                checked
+                  ? 'bg-[#7c3aed] border-[#7c3aed] text-white'
+                  : 'border-[#1e293b] text-[#94a3b8] hover:border-[#7c3aed] hover:text-[#7c3aed]'
+              }`}
+            >
+              {checked ? '✓ Selected' : 'Select'}
+            </button>
+          )}
         </div>
       </div>
     </div>

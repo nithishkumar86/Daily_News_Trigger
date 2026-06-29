@@ -1,10 +1,9 @@
 'use client'
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { getBrowserSupabase } from '@/lib/supabase'
 import { NewsItem, ContentFormat, Message } from '@/lib/types'
 import NewsCard from '@/components/NewsCard'
-import ContentGeneratorPanel from '@/components/ContentGeneratorPanel'
 
 const ContentModal = dynamic(() => import('@/components/ContentModal'), { ssr: false })
 
@@ -14,16 +13,13 @@ const MAX_REFINEMENT_LENGTH = 2000
 export default function LatestPage() {
   const [items, setItems] = useState<NewsItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const [selectedFormat, setSelectedFormat] = useState<ContentFormat | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [generatedContent, setGeneratedContent] = useState('')
   const [history, setHistory] = useState<Message[]>([])
+  const [newsletterItems, setNewsletterItems] = useState<NewsItem[]>([])
   const abortRef = useRef<AbortController | null>(null)
-
-  const selectedItems = useMemo(() => items.filter(i => checkedIds.has(i.id)), [items, checkedIds])
-  const allSelected = useMemo(() => items.length > 0 && checkedIds.size === items.length, [items.length, checkedIds.size])
 
   const loadItems = useCallback(async () => {
     try {
@@ -60,57 +56,101 @@ export default function LatestPage() {
     return () => { supabase.removeChannel(channel) }
   }, [loadItems])
 
-  // Abort in-flight requests on unmount
   useEffect(() => () => { abortRef.current?.abort() }, [])
 
-  const handleToggle = useCallback((id: string) => {
-    setCheckedIds(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }, [])
-
-  const handleSelectAll = useCallback(() => {
-    if (allSelected) {
-      setCheckedIds(new Set())
-    } else {
-      setCheckedIds(new Set(items.map(i => i.id)))
-    }
-  }, [allSelected, items])
-
-  const handleGenerate = useCallback(async (format: ContentFormat) => {
-    if (!selectedItems.length || isGenerating) return
+  const handleNewsletter = useCallback(async () => {
+    if (isGenerating) return
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
 
-    setSelectedFormat(format)
+    setSelectedFormat('newsletter')
     setIsGenerating(true)
     setGeneratedContent('')
     setHistory([])
     setModalOpen(true)
 
     try {
+      const supabase = getBrowserSupabase()
+
+      const { data: maxAI } = await supabase
+        .from('ai_news')
+        .select('Date')
+        .order('Date', { ascending: false })
+        .limit(1)
+        .single()
+
+      const { data: maxInv } = await supabase
+        .from('investment_news')
+        .select('Date')
+        .order('Date', { ascending: false })
+        .limit(1)
+        .single()
+
+      const aiDate = maxAI?.Date ?? ''
+      const invDate = maxInv?.Date ?? ''
+
+      const [trending, ai, tools, investment] = await Promise.all([
+        supabase
+          .from('ai_news')
+          .select('id, Rank, Topic, Title, Summary, Image, Link, Date')
+          .eq('Date', aiDate)
+          .eq('Topic', 'trending')
+          .order('Rank', { ascending: true })
+          .limit(1)
+          .single(),
+        supabase
+          .from('ai_news')
+          .select('id, Rank, Topic, Title, Summary, Image, Link, Date')
+          .eq('Date', aiDate)
+          .eq('Topic', 'ai')
+          .order('Rank', { ascending: true })
+          .limit(1)
+          .single(),
+        supabase
+          .from('ai_news')
+          .select('id, Rank, Topic, Title, Summary, Image, Link, Date')
+          .eq('Date', aiDate)
+          .eq('Topic', 'tools')
+          .order('Rank', { ascending: true })
+          .limit(1)
+          .single(),
+        supabase
+          .from('investment_news')
+          .select('id, Rank, Topic, Title, Summary, Image, Link, Date')
+          .eq('Date', invDate)
+          .order('Rank', { ascending: true })
+          .limit(1)
+          .single(),
+      ])
+
+      const selectedItems = [trending.data, ai.data, tools.data, investment.data].filter(Boolean) as NewsItem[]
+
+      if (selectedItems.length === 0) {
+        setGeneratedContent('No news available to generate newsletter.')
+        return
+      }
+
+      setNewsletterItems(selectedItems)
+
       const res = await fetch('/api/generate-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ format, selectedItems }),
+        body: JSON.stringify({ format: 'newsletter', selectedItems }),
         signal: controller.signal,
       })
       if (!res.ok) throw new Error(`Server error: ${res.status}`)
       const json = await res.json()
-      setGeneratedContent(json.content ?? json.error ?? 'Error generating content')
+      setGeneratedContent(json.content ?? json.error ?? 'Error generating newsletter')
       setHistory(json.updatedHistory ?? [])
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
-        setGeneratedContent('Failed to generate content. Please try again.')
+        setGeneratedContent('Failed to generate newsletter. Please try again.')
       }
     } finally {
       setIsGenerating(false)
     }
-  }, [selectedItems, isGenerating])
+  }, [isGenerating])
 
   const handleRefine = useCallback(async (refinement: string) => {
     if (!selectedFormat || isGenerating) return
@@ -125,7 +165,7 @@ export default function LatestPage() {
       const res = await fetch('/api/generate-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ format: selectedFormat, selectedItems, refinement: trimmed, history }),
+        body: JSON.stringify({ format: selectedFormat, selectedItems: newsletterItems, refinement: trimmed, history }),
         signal: controller.signal,
       })
       if (!res.ok) throw new Error(`Server error: ${res.status}`)
@@ -139,12 +179,7 @@ export default function LatestPage() {
     } finally {
       setIsGenerating(false)
     }
-  }, [selectedFormat, isGenerating, selectedItems, history])
-
-  const handleClear = useCallback(() => {
-    setCheckedIds(new Set())
-    setSelectedFormat(null)
-  }, [])
+  }, [selectedFormat, isGenerating, newsletterItems, history])
 
   const handleCloseModal = useCallback(() => {
     setModalOpen(false)
@@ -153,7 +188,7 @@ export default function LatestPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#0d0d1a] pb-32 sm:pb-28">
+    <div className="min-h-screen bg-[#0d0d1a] pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
 
         {/* Page header */}
@@ -165,10 +200,18 @@ export default function LatestPage() {
             </div>
             {!loading && items.length > 0 && (
               <button
-                onClick={handleSelectAll}
-                className="text-xs text-[#7c3aed] hover:text-[#3b82f6] transition-colors shrink-0 underline underline-offset-2"
+                onClick={handleNewsletter}
+                disabled={isGenerating}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#7c3aed] text-white text-base font-medium hover:bg-purple-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
               >
-                {allSelected ? 'Clear All' : `Select All (${items.length})`}
+                {isGenerating ? (
+                  <>
+                    <span className="inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  '📧 Newsletter'
+                )}
               </button>
             )}
           </div>
@@ -189,27 +232,18 @@ export default function LatestPage() {
         ) : (
           <div className="flex flex-col gap-6 max-w-5xl mx-auto">
             {items.map(item => (
-              <NewsCard key={item.id} item={item} checked={checkedIds.has(item.id)} onToggle={handleToggle} />
+              <NewsCard key={item.id} item={item} />
             ))}
           </div>
         )}
       </div>
-
-      <ContentGeneratorPanel
-        selectedCount={checkedIds.size}
-        onGenerate={handleGenerate}
-        onClear={handleClear}
-        isGenerating={isGenerating}
-        selectedFormat={selectedFormat}
-        onSelectFormat={setSelectedFormat}
-      />
 
       <ContentModal
         isOpen={modalOpen}
         onClose={handleCloseModal}
         content={generatedContent}
         isGenerating={isGenerating}
-        selectedItems={selectedItems}
+        selectedItems={newsletterItems}
         format={selectedFormat}
         onRefine={handleRefine}
       />

@@ -245,6 +245,7 @@ export default function AIPage() {
         isGenerating={isGenerating}
         selectedFormat={selectedFormat}
         onSelectFormat={setSelectedFormat}
+        excludeFormats={['newsletter']}
       />
 
       <ContentModal

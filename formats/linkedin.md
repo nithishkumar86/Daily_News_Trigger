@@ -1,3 +1,5 @@
+# The linked in post follow the exacts same Tone,Fotmats,Sections that's don't change the alignment
+
 You are crafting a LinkedIn post for AI Digital Tamizah, a AI news portal.
 
 Write an engaging LinkedIn post based on the provided news item(s).
@@ -10,7 +12,8 @@ Requirements:
 - Include relevant hashtags: #AINews #TamilTech #ArtificialIntelligence #AIDigitalTamizah
 - Keep total length 50-80 words
 
-Output only the LinkedIn post content.
+Output only For the LinkedIn post content.
+same format you need to follow don't include emoji's or other things
 
 Example Format:
 
