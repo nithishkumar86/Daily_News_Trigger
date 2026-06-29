@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase } from '@/lib/supabase'
+import { getServerSupabase, IMAGE_BUCKET } from '@/lib/supabase'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 const SERVER_INFO = {
   name: 'daily-news-trigger',
@@ -74,6 +75,41 @@ function validateArgs(args: Record<string, string>): string | null {
   return null
 }
 
+function extFromMime(mime: string): string {
+  if (mime.includes('png')) return 'png'
+  if (mime.includes('webp')) return 'webp'
+  if (mime.includes('gif')) return 'gif'
+  return 'jpg'
+}
+
+// Download the agent's (short-lived) image URL and upload it to Supabase
+// Storage, returning the permanent public URL. A base64/raw value passes
+// through unchanged; on any failure returns null (row still inserts).
+async function resolveImage(
+  supabase: SupabaseClient,
+  table: string,
+  date: string,
+  rank: string,
+  image: string
+): Promise<string | null> {
+  const url = image?.startsWith('http') ? image : null
+  if (!url) return image ?? null
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const buffer = Buffer.from(await res.arrayBuffer())
+    const mime = res.headers.get('content-type') ?? 'image/jpeg'
+    const path = `${table}/${date}-rank${rank}.${extFromMime(mime)}`
+    const { error } = await supabase.storage
+      .from(IMAGE_BUCKET)
+      .upload(path, buffer, { contentType: mime, upsert: true })
+    if (error) return null
+    return supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path).data.publicUrl
+  } catch {
+    return null
+  }
+}
+
 async function handleToolCall(name: string, args: Record<string, string>) {
   if (name !== 'send_news') {
     return { error: { code: -32601, message: `Unknown tool: ${name}` } }
@@ -101,9 +137,12 @@ async function handleToolCall(name: string, args: Record<string, string>) {
     }
   }
 
+  // Download the temp image URL and store the permanent Storage URL instead.
+  const resolvedImage = await resolveImage(supabase, table, DateVal, Rank, Image)
+
   const { data, error } = await supabase
     .from(table)
-    .insert({ Rank, Topic: Topic.toLowerCase().trim(), Title, Summary, Image, Link, Date: DateVal })
+    .insert({ Rank, Topic: Topic.toLowerCase().trim(), Title, Summary, Image: resolvedImage, Link, Date: DateVal })
     .select()
     .single()
 
