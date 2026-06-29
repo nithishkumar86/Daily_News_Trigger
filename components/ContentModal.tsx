@@ -29,11 +29,15 @@ export default function ContentModal({
   if (!isOpen) return null
 
   const firstItem = selectedItems[0]
-  const imageSrc = firstItem?.Image && !firstItem.Image.startsWith('http')
-    ? firstItem.Image.startsWith('data:')
-      ? firstItem.Image
-      : `data:image/jpeg;base64,${firstItem.Image}`
-    : null
+  const imageSrc = (() => {
+    if (!firstItem?.Image) return null
+    if (firstItem.Image.startsWith('http')) return firstItem.Image
+    if (firstItem.Image.startsWith('data:')) return firstItem.Image
+    const stripped = firstItem.Image.replace(/=+$/, '')
+    const pad = stripped.length % 4
+    const b64 = pad === 0 ? stripped : stripped + '='.repeat(4 - pad)
+    return `data:image/jpeg;base64,${b64}`
+  })()
 
   const handleCopyText = async () => {
     await navigator.clipboard.writeText(content)
@@ -44,9 +48,20 @@ export default function ContentModal({
   const handleCopyImage = async () => {
     if (!imageSrc) return
     try {
-      const response = await fetch(imageSrc)
-      const blob = await response.blob()
-      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
+      const img = new window.Image()
+      if (!imageSrc.startsWith('data:')) img.crossOrigin = 'anonymous'
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve()
+        img.onerror = reject
+        img.src = imageSrc
+      })
+      const canvas = document.createElement('canvas')
+      canvas.width = img.naturalWidth || 512
+      canvas.height = img.naturalHeight || 512
+      canvas.getContext('2d')!.drawImage(img, 0, 0)
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'))
+      if (!blob) throw new Error('blob failed')
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
       setCopiedImage(true)
       setTimeout(() => setCopiedImage(false), 2000)
     } catch {

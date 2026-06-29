@@ -44,3 +44,8 @@ package-lock.json
 workflow.excalidraw
 
 .vercel
+
+screenshots/
+feature_report.md
+
+Screenshot_image.png

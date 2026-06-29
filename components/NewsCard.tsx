@@ -11,11 +11,20 @@ interface NewsCardProps {
 
 export default function NewsCard({ item, checked, onToggle }: NewsCardProps) {
   const [expanded, setExpanded] = useState(false)
-  const imageSrc = item.Image && !item.Image.startsWith('http')
-    ? item.Image.startsWith('data:')
-      ? item.Image
-      : `data:image/jpeg;base64,${item.Image}`
-    : null
+  const [imgError, setImgError] = useState(false)
+
+  const imageSrc = (() => {
+    if (!item.Image) return null
+    if (item.Image.startsWith('http')) return item.Image
+    if (item.Image.startsWith('data:')) return item.Image
+    // Normalize base64 padding — length must be a multiple of 4
+    const stripped = item.Image.replace(/=+$/, '')
+    const pad = stripped.length % 4
+    const b64 = pad === 0 ? stripped : stripped + '='.repeat(4 - pad)
+    return `data:image/jpeg;base64,${b64}`
+  })()
+
+  const showImage = imageSrc && !imgError
 
   return (
     <div
@@ -25,8 +34,13 @@ export default function NewsCard({ item, checked, onToggle }: NewsCardProps) {
     >
       {/* Image */}
       <div className="relative h-72 sm:h-96">
-        {imageSrc ? (
-          <img src={imageSrc} alt={item.Title} className="w-full h-full object-cover" />
+        {showImage ? (
+          <img
+            src={imageSrc}
+            alt={item.Title}
+            className="w-full h-full object-cover"
+            onError={() => setImgError(true)}
+          />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-[#1a1a2e] to-[#0d0d1a] flex items-center justify-center">
             <span className="text-[#2d2d4e] text-6xl font-bold">#{item.Rank}</span>
