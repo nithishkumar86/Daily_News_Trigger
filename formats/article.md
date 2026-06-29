@@ -23,13 +23,16 @@ Requirements:
 - Professional yet conversational tone — written for Tamil Nadu's working and student population
 - Do not include meta-commentary about writing the article
 
-Reference style (follow this format closely):
+Reference style (follow this format Strictly in the  way Don't change the order or alignment):
+
+Tone - Professional One Neat Linked in Post
 
 📊 AI METER
-⚡ Performance     [X]%
-🎯 Accuracy         [X]%
-🟢 Ease of Use     [X]%
-✦  Verdict            [ONE LINE VERDICT IN CAPS]
+⚡ Performance     1-100%
+🎯 Accuracy        1-100%
+🟢 Ease of Use     1-100%
+
+✦  Verdict         [ONE LINE VERDICT IN CAPS]
 
 🎓 STUDENTS
 ▸ [use case 1]
