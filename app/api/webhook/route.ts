@@ -66,33 +66,62 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Resolve images: fetch URL → base64 if ImageUrl is provided
-    async function resolveImage(image?: string, imageUrl?: string): Promise<string | null> {
-      if (image) return image
-      if (!imageUrl) return null
+    const IMAGE_BUCKET = 'news-images'
+
+    function extFromMime(mime: string): string {
+      if (mime.includes('png')) return 'png'
+      if (mime.includes('webp')) return 'webp'
+      if (mime.includes('gif')) return 'gif'
+      return 'jpg'
+    }
+
+    // Resolve images: download the agent's temporary URL and upload it to
+    // Supabase Storage, storing only the permanent public URL. A `data:` /
+    // raw base64 value (or nothing) is passed through unchanged.
+    async function resolveImage(
+      table: 'ai_news' | 'investment_news',
+      date: string,
+      rank: number,
+      image?: string,
+      imageUrl?: string
+    ): Promise<string | null> {
+      const url = imageUrl ?? (image?.startsWith('http') ? image : null)
+      if (!url) return image ?? null
       try {
-        const res = await fetch(imageUrl)
+        const res = await fetch(url)
         if (!res.ok) return null
-        const buffer = await res.arrayBuffer()
+        const buffer = Buffer.from(await res.arrayBuffer())
         const mime = res.headers.get('content-type') ?? 'image/jpeg'
-        return `data:${mime};base64,${Buffer.from(buffer).toString('base64')}`
+        const path = `${table}/${date}-rank${rank}.${extFromMime(mime)}`
+        const { error: uploadErr } = await supabase.storage
+          .from(IMAGE_BUCKET)
+          .upload(path, buffer, { contentType: mime, upsert: true })
+        if (uploadErr) return null
+        return supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path).data.publicUrl
       } catch {
         return null
       }
     }
 
+    // Resolve all images in parallel (avoids slow sequential webhook latency)
+    const resolvedImages = await Promise.all(
+      items.map(item => {
+        const table = resolveTable(item.Topic)! // validated above
+        return resolveImage(table, item.Date ?? today, item.Rank, item.Image, item.ImageUrl)
+      })
+    )
+
     // Group items by target table based on Topic
     const aiRows: object[] = []
     const investmentRows: object[] = []
 
-    for (const item of items) {
-      const resolvedImage = await resolveImage(item.Image, item.ImageUrl)
+    items.forEach((item, i) => {
       const row = {
         Rank: item.Rank,
         Topic: item.Topic.toLowerCase().trim(),
         Title: item.Title,
         Summary: item.Summary,
-        Image: resolvedImage,
+        Image: resolvedImages[i],
         Link: item.Link,
         Date: item.Date ?? today,
       }
@@ -101,7 +130,7 @@ export async function POST(req: NextRequest) {
       } else {
         investmentRows.push(row)
       }
-    }
+    })
 
     const results: { table: string; inserted: number }[] = []
 

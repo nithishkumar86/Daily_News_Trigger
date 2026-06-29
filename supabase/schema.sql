@@ -71,3 +71,10 @@ CREATE POLICY "Service update cleanup_log" ON cleanup_log FOR ALL USING (true);
 -- Enable Realtime
 ALTER PUBLICATION supabase_realtime ADD TABLE ai_news;
 ALTER PUBLICATION supabase_realtime ADD TABLE investment_news;
+
+-- Storage: public bucket for daily news cover images.
+-- Webhook downloads the agent's temporary image URL and uploads here;
+-- the DB stores only the permanent public CDN URL.
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('news-images', 'news-images', true)
+ON CONFLICT (id) DO NOTHING;
