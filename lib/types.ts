@@ -19,6 +19,7 @@ export interface WebhookBody {
     Title: string
     Summary: string
     Image?: string
+    ImageUrl?: string
     Link: string
     Date?: string
   }>

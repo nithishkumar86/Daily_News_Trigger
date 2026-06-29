@@ -66,17 +66,33 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Resolve images: fetch URL → base64 if ImageUrl is provided
+    async function resolveImage(image?: string, imageUrl?: string): Promise<string | null> {
+      if (image) return image
+      if (!imageUrl) return null
+      try {
+        const res = await fetch(imageUrl)
+        if (!res.ok) return null
+        const buffer = await res.arrayBuffer()
+        const mime = res.headers.get('content-type') ?? 'image/jpeg'
+        return `data:${mime};base64,${Buffer.from(buffer).toString('base64')}`
+      } catch {
+        return null
+      }
+    }
+
     // Group items by target table based on Topic
     const aiRows: object[] = []
     const investmentRows: object[] = []
 
     for (const item of items) {
+      const resolvedImage = await resolveImage(item.Image, item.ImageUrl)
       const row = {
         Rank: item.Rank,
         Topic: item.Topic.toLowerCase().trim(),
         Title: item.Title,
         Summary: item.Summary,
-        Image: item.Image ?? null,
+        Image: resolvedImage,
         Link: item.Link,
         Date: item.Date ?? today,
       }

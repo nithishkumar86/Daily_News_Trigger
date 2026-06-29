@@ -16,6 +16,7 @@ export default function NewsCard({ item, checked, onToggle }: NewsCardProps) {
   const imageSrc = (() => {
     if (!item.Image) return null
     if (item.Image.startsWith('data:')) return item.Image
+    if (item.Image.startsWith('http://') || item.Image.startsWith('https://')) return item.Image
     // Normalize raw base64 padding — length must be a multiple of 4
     const stripped = item.Image.replace(/=+$/, '')
     const pad = stripped.length % 4
