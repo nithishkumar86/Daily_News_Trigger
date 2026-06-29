@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase } from '@/lib/supabase'
+import { getServerSupabase, IMAGE_BUCKET } from '@/lib/supabase'
 import { WebhookBody } from '@/lib/types'
 
 const AI_TOPICS = ['trending', 'ai', 'tools', 'models']
@@ -65,8 +65,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, error: `Item ${i + 1}: Link is required` }, { status: 400 })
       }
     }
-
-    const IMAGE_BUCKET = 'news-images'
 
     function extFromMime(mime: string): string {
       if (mime.includes('png')) return 'png'

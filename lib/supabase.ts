@@ -3,6 +3,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
 export const AI_NEWS_TABLE = 'ai_news'
 export const INVESTMENT_NEWS_TABLE = 'investment_news'
 export const CLEANUP_LOG_TABLE = 'cleanup_log'
+export const IMAGE_BUCKET = 'news-images'
 
 // Browser client — uses NEXT_PUBLIC_ keys, safe in components
 let browserClient: SupabaseClient | null = null
