@@ -34,18 +34,18 @@ export default function NewsCard({ item, checked, onToggle }: NewsCardProps) {
 
     >
       {/* Image */}
-      <div className="relative h-72 sm:h-96">
+      <div className="relative">
         {showImage ? (
           <img
             src={imageSrc!}
             alt={item.Title}
-            className="w-full h-full object-cover"
+            className="w-full h-auto block"
             loading="lazy"
             decoding="async"
             onError={() => setImgError(true)}
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-[#1a1a2e] to-[#0d0d1a] flex items-center justify-center">
+          <div className="w-full h-72 sm:h-96 bg-gradient-to-br from-[#1a1a2e] to-[#0d0d1a] flex items-center justify-center">
             <span className="text-[#2d2d4e] text-6xl font-bold">#{item.Rank}</span>
           </div>
         )}
