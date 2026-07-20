@@ -142,9 +142,15 @@ async function handleToolCall(name: string, args: Record<string, string>) {
   // Download the temp image URL and store the permanent Storage URL instead.
   const resolvedImage = await resolveImage(supabase, table, DateVal, Rank, Image)
 
+  // Upsert, not insert: ("Date","Rank") is unique per table, so a re-run or a
+  // retried send on the same day would otherwise fail with a duplicate key and
+  // lose the item. Conflicting rows are replaced, making ingest idempotent.
   const { data, error } = await supabase
     .from(table)
-    .insert({ Rank, Topic: Topic.toLowerCase().trim(), Title, Summary, Image: resolvedImage, Link, Date: DateVal })
+    .upsert(
+      { Rank, Topic: Topic.toLowerCase().trim(), Title, Summary, Image: resolvedImage, Link, Date: DateVal },
+      { onConflict: 'Date,Rank' }
+    )
     .select()
     .single()
 
