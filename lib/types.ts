@@ -10,7 +10,7 @@ export interface NewsItem {
   created_at?: string
 }
 
-export type TableName = 'ai_news' | 'investment_news'
+export type TableName = 'ai_news' | 'investment_news' | 'job_hire_fire'
 
 export interface WebhookBody {
   items: Array<{

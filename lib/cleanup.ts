@@ -2,6 +2,7 @@ import {
   getServerSupabase,
   AI_NEWS_TABLE,
   INVESTMENT_NEWS_TABLE,
+  JOB_NEWS_TABLE,
   CLEANUP_LOG_TABLE,
   IMAGE_BUCKET,
 } from './supabase'
@@ -32,23 +33,48 @@ async function cleanupBucketFolder(
   return rmErr ? 0 : toDelete.length
 }
 
-export async function runCleanup(): Promise<{
+export interface CleanupResult {
+  success: boolean
   deleted_ai: number
   deleted_investment: number
+  deleted_job: number
   deleted_images: number
-}> {
+  errors: string[]
+}
+
+export async function runCleanup(): Promise<CleanupResult> {
   const supabase = getServerSupabase()
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const errors: string[] = []
 
-  const { count: aiCount } = await supabase
+  // Column is quoted "Date" in Postgres (case-sensitive) — an unquoted `date`
+  // filter is folded to lowercase by Postgres and fails with 42703.
+  const { count: aiCount, error: aiErr } = await supabase
     .from(AI_NEWS_TABLE)
     .delete({ count: 'exact' })
-    .lt('date', sevenDaysAgo)
+    .lt('Date', sevenDaysAgo)
+  if (aiErr) {
+    console.error('cleanup ai_news delete failed:', aiErr)
+    errors.push(`${AI_NEWS_TABLE}: ${aiErr.message}`)
+  }
 
-  const { count: invCount } = await supabase
+  const { count: invCount, error: invErr } = await supabase
     .from(INVESTMENT_NEWS_TABLE)
     .delete({ count: 'exact' })
-    .lt('date', sevenDaysAgo)
+    .lt('Date', sevenDaysAgo)
+  if (invErr) {
+    console.error('cleanup investment_news delete failed:', invErr)
+    errors.push(`${INVESTMENT_NEWS_TABLE}: ${invErr.message}`)
+  }
+
+  const { count: jobCount, error: jobErr } = await supabase
+    .from(JOB_NEWS_TABLE)
+    .delete({ count: 'exact' })
+    .lt('Date', sevenDaysAgo)
+  if (jobErr) {
+    console.error('cleanup job_hire_fire delete failed:', jobErr)
+    errors.push(`${JOB_NEWS_TABLE}: ${jobErr.message}`)
+  }
 
   // Mirror the DB cleanup in Storage: remove cover images older than 7 days.
   // Wrapped so a storage hiccup never blocks the DB cleanup / log update.
@@ -56,14 +82,33 @@ export async function runCleanup(): Promise<{
   try {
     deletedImages += await cleanupBucketFolder(supabase, AI_NEWS_TABLE, sevenDaysAgo)
     deletedImages += await cleanupBucketFolder(supabase, INVESTMENT_NEWS_TABLE, sevenDaysAgo)
+    deletedImages += await cleanupBucketFolder(supabase, JOB_NEWS_TABLE, sevenDaysAgo)
   } catch {
     // ignore — image cleanup is best-effort
   }
 
-  const today = new Date().toISOString().split('T')[0]
-  await supabase
-    .from(CLEANUP_LOG_TABLE)
-    .upsert({ id: 1, last_cleaned: today }, { onConflict: 'id' })
+  // Only record success when every delete actually succeeded. Stamping
+  // `last_cleaned` after a failed delete marks the job done while nothing was
+  // removed, which silently suppresses retries for a full week. Leaving the log
+  // untouched makes the next request retry.
+  const success = errors.length === 0
+  if (success) {
+    const today = new Date().toISOString().split('T')[0]
+    const { error: logErr } = await supabase
+      .from(CLEANUP_LOG_TABLE)
+      .upsert({ id: 1, last_cleaned: today }, { onConflict: 'id' })
+    if (logErr) {
+      console.error('cleanup_log upsert failed:', logErr)
+      errors.push(`${CLEANUP_LOG_TABLE}: ${logErr.message}`)
+    }
+  }
 
-  return { deleted_ai: aiCount ?? 0, deleted_investment: invCount ?? 0, deleted_images: deletedImages }
+  return {
+    success: errors.length === 0,
+    deleted_ai: aiCount ?? 0,
+    deleted_investment: invCount ?? 0,
+    deleted_job: jobCount ?? 0,
+    deleted_images: deletedImages,
+    errors,
+  }
 }

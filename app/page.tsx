@@ -39,12 +39,6 @@ export default function HomePage() {
     }
 
     loadHeadlines()
-
-    // Deferred — non-critical, runs only on Sundays, idempotent
-    const cleanupTimer = setTimeout(() => {
-      fetch('/api/check-cleanup').catch(() => {})
-    }, 500)
-    return () => clearTimeout(cleanupTimer)
   }, [])
 
   return (
@@ -67,7 +61,7 @@ export default function HomePage() {
           <p className="text-xl sm:text-2xl text-[#94a3b8] max-w-2xl mx-auto leading-relaxed">
             Your Daily Dose of AI Intelligence — curated by AI, delivered daily
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center pt-2 sm:pt-4 w-full">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 justify-center pt-2 sm:pt-4 w-full">
             <Link
               href="/latest"
               className="min-h-[56px] flex items-center justify-center px-8 py-4 bg-[#7c3aed] text-white text-lg rounded-xl font-medium hover:bg-purple-600 transition-all w-full sm:w-auto"
@@ -85,6 +79,12 @@ export default function HomePage() {
               className="min-h-[56px] flex items-center justify-center px-8 py-4 bg-[#1a1a2e] border border-[#1e293b] text-[#f1f5f9] text-lg rounded-xl font-medium hover:border-[#3b82f6] transition-all w-full sm:w-auto"
             >
               Investment News
+            </Link>
+            <Link
+              href="/job"
+              className="min-h-[56px] flex items-center justify-center px-8 py-4 bg-[#1a1a2e] border border-[#1e293b] text-[#f1f5f9] text-lg rounded-xl font-medium hover:border-[#f59e0b] transition-all w-full sm:w-auto"
+            >
+              Job News
             </Link>
           </div>
         </div>

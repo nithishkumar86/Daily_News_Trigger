@@ -9,12 +9,14 @@ const SERVER_INFO = {
 
 const AI_TOPICS = ['trending', 'ai', 'tools', 'models']
 const INVESTMENT_TOPICS = ['startup', 'investment', 'funding', 'company']
-const ALL_VALID_TOPICS = [...AI_TOPICS, ...INVESTMENT_TOPICS]
+const JOB_TOPICS = ['hiring', 'layoffs', 'jobs', 'hr']
+const ALL_VALID_TOPICS = [...AI_TOPICS, ...INVESTMENT_TOPICS, ...JOB_TOPICS]
 
-function resolveTable(topic: string): 'ai_news' | 'investment_news' | null {
+function resolveTable(topic: string): 'ai_news' | 'investment_news' | 'job_hire_fire' | null {
   const t = topic.toLowerCase().trim()
   if (AI_TOPICS.includes(t)) return 'ai_news'
   if (INVESTMENT_TOPICS.includes(t)) return 'investment_news'
+  if (JOB_TOPICS.includes(t)) return 'job_hire_fire'
   return null
 }
 
@@ -22,7 +24,7 @@ const TOOLS = [
   {
     name: 'send_news',
     description:
-      'Send a single news item to the Daily News Trigger database. Call this once per news item, in rank order (1 through 10). Topic automatically routes to the correct table: trending/ai/tools/models → ai_news, startup/investment/funding/company → investment_news.',
+      'Send a single news item to the Daily News Trigger database. Call this once per news item, in rank order (1 through 10). Topic automatically routes to the correct table: trending/ai/tools/models → ai_news, startup/investment/funding/company → investment_news, hiring/layoffs/jobs/hr → job_hire_fire.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -32,7 +34,7 @@ const TOOLS = [
         },
         Topic: {
           type: 'string',
-          description: `Category of the news item. Must be one of: ${ALL_VALID_TOPICS.join(', ')}. AI news: trending, ai, tools, models. Investment news: startup, investment, funding, company.`,
+          description: `Category of the news item. Must be one of: ${ALL_VALID_TOPICS.join(', ')}. AI news: trending, ai, tools, models. Investment news: startup, investment, funding, company. Job news: hiring, layoffs, jobs, hr.`,
         },
         Title: {
           type: 'string',
@@ -216,7 +218,7 @@ export async function GET() {
   return NextResponse.json({
     name: SERVER_INFO.name,
     version: SERVER_INFO.version,
-    description: 'MCP server for Daily News Trigger — auto-routes news to ai_news or investment_news based on Topic',
+    description: 'MCP server for Daily News Trigger — auto-routes news to ai_news, investment_news, or job_hire_fire based on Topic',
     tools: TOOLS.map((t) => ({ name: t.name, description: t.description })),
   })
 }

@@ -2,6 +2,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
 export const AI_NEWS_TABLE = 'ai_news'
 export const INVESTMENT_NEWS_TABLE = 'investment_news'
+export const JOB_NEWS_TABLE = 'job_hire_fire'
 export const CLEANUP_LOG_TABLE = 'cleanup_log'
 export const IMAGE_BUCKET = 'news-images'
 

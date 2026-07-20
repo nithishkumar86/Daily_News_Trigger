@@ -6,81 +6,102 @@ jest.mock('@/lib/supabase', () => ({
   getServerSupabase: jest.fn(),
   AI_NEWS_TABLE: 'ai_news',
   INVESTMENT_NEWS_TABLE: 'investment_news',
+  JOB_NEWS_TABLE: 'job_hire_fire',
   CLEANUP_LOG_TABLE: 'cleanup_log',
 }))
 
 const mockGetServerSupabase = supabaseModule.getServerSupabase as jest.Mock
 
-function buildMockSupabase(aiCount: number | null, invCount: number | null, upsertError?: Error) {
-  const upsert = upsertError
-    ? jest.fn().mockRejectedValue(upsertError)
-    : jest.fn().mockResolvedValue({ error: null })
+interface TableOutcome {
+  count: number | null
+  error?: { message: string }
+}
 
-  const makeMockChain = (count: number | null) => {
+// One mock client for all delete-path tests. Each news table resolves its own
+// count so a mis-wired table branch surfaces as a wrong `deleted_*` value.
+// `upsert` is shared so tests can assert whether the log was stamped.
+function buildMockSupabase(
+  ai: TableOutcome,
+  inv: TableOutcome,
+  job: TableOutcome
+) {
+  const upsert = jest.fn().mockResolvedValue({ error: null })
+
+  const makeMockChain = (outcome: TableOutcome) => {
     const chain: Record<string, jest.Mock> = {}
     chain.delete = jest.fn().mockReturnValue(chain)
-    chain.lt = jest.fn().mockResolvedValue({ count, error: null })
+    chain.lt = jest
+      .fn()
+      .mockResolvedValue({ count: outcome.count, error: outcome.error ?? null })
     return chain
   }
 
-  return {
+  const client = {
     from: jest.fn((table: string) => {
-      if (table === 'ai_news') return makeMockChain(aiCount)
-      if (table === 'investment_news') return makeMockChain(invCount)
-      return { upsert, select: jest.fn().mockReturnThis(), eq: jest.fn().mockReturnThis() }
+      if (table === 'ai_news') return makeMockChain(ai)
+      if (table === 'investment_news') return makeMockChain(inv)
+      if (table === 'job_hire_fire') return makeMockChain(job)
+      return { upsert }
     }),
   }
+
+  return { client, upsert }
 }
 
+const ok = (count: number | null): TableOutcome => ({ count })
+
 describe('runCleanup', () => {
-  afterEach(() => {
-    jest.clearAllMocks()
+  let errorSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
   })
 
-  it('happy path: returns correct deleted counts when rows exist', async () => {
-    const mockSupabase = {
-      from: jest.fn((table: string) => {
-        const chain: Record<string, jest.Mock> = {}
-        if (table === 'ai_news') {
-          chain.delete = jest.fn().mockReturnValue(chain)
-          chain.lt = jest.fn().mockResolvedValue({ count: 3, error: null })
-          return chain
-        }
-        if (table === 'investment_news') {
-          chain.delete = jest.fn().mockReturnValue(chain)
-          chain.lt = jest.fn().mockResolvedValue({ count: 2, error: null })
-          return chain
-        }
-        // cleanup_log upsert chain
-        return { upsert: jest.fn().mockResolvedValue({ error: null }) }
-      }),
-    }
-    mockGetServerSupabase.mockReturnValue(mockSupabase)
+  afterEach(() => {
+    jest.clearAllMocks()
+    errorSpy.mockRestore()
+  })
+
+  it('happy path: returns correct deleted counts and stamps last_cleaned', async () => {
+    const { client, upsert } = buildMockSupabase(ok(3), ok(2), ok(4))
+    mockGetServerSupabase.mockReturnValue(client)
 
     const result = await runCleanup()
 
     expect(result.deleted_ai).toBe(3)
     expect(result.deleted_investment).toBe(2)
+    expect(result.deleted_job).toBe(4)
+    expect(result.success).toBe(true)
+    expect(result.errors).toEqual([])
+    expect(upsert).toHaveBeenCalledTimes(1)
   })
 
   it('edge case: returns zero counts when no rows older than 7 days exist', async () => {
-    const mockSupabase = {
-      from: jest.fn((table: string) => {
-        const chain: Record<string, jest.Mock> = {}
-        if (table === 'ai_news' || table === 'investment_news') {
-          chain.delete = jest.fn().mockReturnValue(chain)
-          chain.lt = jest.fn().mockResolvedValue({ count: null, error: null })
-          return chain
-        }
-        return { upsert: jest.fn().mockResolvedValue({ error: null }) }
-      }),
-    }
-    mockGetServerSupabase.mockReturnValue(mockSupabase)
+    const { client } = buildMockSupabase(ok(null), ok(null), ok(null))
+    mockGetServerSupabase.mockReturnValue(client)
 
     const result = await runCleanup()
 
     expect(result.deleted_ai).toBe(0)
     expect(result.deleted_investment).toBe(0)
+    expect(result.deleted_job).toBe(0)
+    expect(result.success).toBe(true)
+  })
+
+  it('error case: a failed delete surfaces the error and does NOT stamp last_cleaned', async () => {
+    const { client, upsert } = buildMockSupabase(
+      { count: null, error: { message: 'column "date" does not exist' } },
+      ok(2),
+      ok(0)
+    )
+    mockGetServerSupabase.mockReturnValue(client)
+
+    const result = await runCleanup()
+
+    expect(result.success).toBe(false)
+    expect(result.errors).toHaveLength(1)
+    expect(result.errors[0]).toContain('ai_news')
+    expect(upsert).not.toHaveBeenCalled()
   })
 
   it('error case: propagates error when getServerSupabase throws', async () => {
