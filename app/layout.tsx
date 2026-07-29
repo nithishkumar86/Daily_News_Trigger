@@ -4,7 +4,7 @@ import Navbar from '@/components/Navbar'
 import CleanupTrigger from '@/components/CleanupTrigger'
 
 export const metadata: Metadata = {
-  title: 'AI Digital Tamizah — Daily AI News',
+  title: 'AI Digital Tamizha — Daily AI News',
   description: 'Your daily source for AI and investment intelligence',
 }
 
