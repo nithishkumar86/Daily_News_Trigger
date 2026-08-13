@@ -56,7 +56,7 @@ export default function HomePage() {
           </div>
           <h1 className="text-5xl sm:text-6xl lg:text-8xl font-bold text-[#f1f5f9] leading-tight">
             AI Digital{' '}
-            <span className="text-[#7c3aed]">Tamizah</span>
+            <span className="text-[#7c3aed]">Tamizha</span>
           </h1>
           <p className="text-xl sm:text-2xl text-[#94a3b8] max-w-2xl mx-auto leading-relaxed">
             Your Daily Dose of AI Intelligence — curated by AI, delivered daily
