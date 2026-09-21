@@ -10,7 +10,7 @@ Create a structured newsletter digest based on the provided news items.
 STRUCTURE TO FOLLOW EXACTLY:
 
 **Header:**
-- "🤖 AI Digital Tamizha — Daily Digest"
+- "AI Digital Tamizha — Daily Digest"
 - Date or date range
 - 1 strong theme message summarizing what this period is about
 - Bullet list of where the big focus/money is this week
@@ -73,6 +73,10 @@ TONE & STYLE:
 - Practical and action-oriented
 - Motivational but not over-hyped
 - Written for students, freelancers, professionals, and business owners
-- Each summary exactly 100–150 words
+- Each summary exactly 100–150 
+- Don't include Emoji's
+- Don't use hypens
+- write in a professional tone in a engagin way .
+- 
 
 Output only the newsletter content.
