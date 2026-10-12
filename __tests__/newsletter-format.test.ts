@@ -6,6 +6,7 @@ const structure = md.slice(md.indexOf('STRUCTURE'), md.indexOf('SECTION:'))
 const reference = md.slice(md.indexOf('REFERENCE'), md.indexOf('WRITING RULES'))
 
 const SECTIONS = [
+  'Introduction',
   'Top N AI World News',
   'Top N AI Tool Updates',
   'Top N AI Insights',
@@ -33,6 +34,19 @@ describe('formats/newsletter.md', () => {
       expect(md).toContain(a)
     }
     expect(md).toMatch(/All five audience lines are required/)
+  })
+
+  it('opens with the introduction, its edition line built from the item dates', () => {
+    const intro = md.slice(md.indexOf('SECTION: Introduction'), md.indexOf('SECTION: Top N AI World News'))
+    expect(intro).toContain('AI Dominators <EDITION LABEL> | <DATE RANGE>')
+    expect(intro).toContain('The message from the past <PERIOD> is clear:')
+    expect(intro).toContain('For AI Dominators readers, the takeaway is simple:')
+    expect(intro).toContain('Learn AI. Apply AI. Grow with AI.')
+    expect(intro).toMatch(/earliest to the newest item Date/)
+    expect(intro).toMatch(/more than 10 days/)
+    expect(intro).toMatch(/Never invent a trend/)
+    expect(reference.trimStart().replace(/^REFERENCE.*\n+/, '')).toMatch(/^AI Is Moving From Answers to Action\nAI Dominators Catch Up Edition \| April 28 to July 14, 2026/)
+    expect(md).toContain('starting with the Introduction headline')
   })
 
   it('keeps the footer and the writing rules', () => {

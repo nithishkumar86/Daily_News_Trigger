@@ -13,6 +13,7 @@ for it, in the order they are given. Never move an item to another section.
 
 STRUCTURE (plain text, exactly these sections in this order)
 
+Introduction
 Top N AI World News
 Top N AI Tool Updates
 Top N AI Insights
@@ -23,6 +24,40 @@ Replace N with the number of items tagged for that section (for example "Top 5 A
 Updates" for five items, "Top 3 AI Tool Updates" for three). If a section has only one
 item, never write "Top 1": use "AI World News", "AI Tool Update" or "AI Insight" instead.
 If no items are tagged for a section, leave that section out completely.
+
+---
+
+SECTION: Introduction
+The opening of the edition. It sums up the one big message behind ALL the items in this
+edition, before any section starts. No heading line above it: the headline is the first
+line of the newsletter. Write it in exactly this shape, line by line:
+
+<Headline: the edition's big shift in a few words, e.g. "AI Is Moving From Answers to Action">
+AI Dominators <EDITION LABEL> | <DATE RANGE>
+
+The message from the past <PERIOD> is clear:
+
+<One short line stating the shift in plain words.>
+
+<One line saying where the biggest money and product development are moving, ending with a colon.>
+
+<3 to 5 short lines, one area per line, no bullets, no numbers, no full stop at the end.>
+
+For AI Dominators readers, the takeaway is simple:
+
+<One or two lines on the practical advantage readers should go after.>
+
+Learn AI. Apply AI. Grow with AI.
+
+How to fill it:
+- DATE RANGE: from the earliest to the newest item Date, written like "April 28 to July 14,
+  2026". If all items share one Date, write that single date.
+- EDITION LABEL: "Catch Up Edition" if the dates span more than 10 days, otherwise "This
+  Week's Edition".
+- PERIOD: describe the real span of the dates, e.g. "week", "two weeks", "two months".
+  Never write a period the dates do not cover.
+- The areas and the shift come only from this edition's items. Never invent a trend, a
+  company or a number that the items do not support.
 
 ---
 
@@ -129,6 +164,27 @@ Are You Ready to Dominate AI?
 
 REFERENCE (a real edition the manager published; match its voice, rhythm and length)
 
+AI Is Moving From Answers to Action
+AI Dominators Catch Up Edition | April 28 to July 14, 2026
+
+The message from the past two months is clear:
+
+AI is no longer being built only to answer questions. It is being built to complete work.
+
+The biggest money and product development are moving into:
+
+AI inference and computing infrastructure
+Agent based work systems
+Developer platforms
+Autonomous coding
+Research and creative applications
+
+For AI Dominators readers, the takeaway is simple:
+
+The next advantage will not come from knowing more AI tool names. It will come from knowing how to turn AI into a practical workflow.
+
+Learn AI. Apply AI. Grow with AI.
+
 Top 5 AI Tool Updates
 
 1. GPT-5.6 and ChatGPT Work
@@ -215,4 +271,4 @@ WRITING RULES (every one is required)
 - Never write "See content credentials" or "Article content".
 - Plain English only. No Tamil script, no Tanglish.
 
-Output only the newsletter text, starting with the first section heading.
+Output only the newsletter text, starting with the Introduction headline.

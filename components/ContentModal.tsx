@@ -1,7 +1,16 @@
 'use client'
 import { useState } from 'react'
 import { NewsItem, ContentFormat, Message } from '@/lib/types'
-import { NEWSLETTER_SECTIONS, SectionImage, buildPostingBlocks, buildPostingHtml, imageSrcOf } from '@/lib/newsFeed'
+import {
+  CtaImage,
+  NEWSLETTER_CTA_PATH,
+  NEWSLETTER_CTA_SECTION,
+  NEWSLETTER_SECTIONS,
+  SectionImage,
+  buildPostingBlocks,
+  buildPostingHtml,
+  imageSrcOf,
+} from '@/lib/newsFeed'
 import { X } from 'lucide-react'
 
 interface ContentModalProps {
@@ -17,6 +26,8 @@ interface ContentModalProps {
   // Pipeline infographics (one per newsletter section, or the article hero). When given,
   // they replace the news-item photos everywhere: on screen and in the copied post.
   generatedImages?: SectionImage[]
+  // Pipeline newsletters end with the fixed "Thanks for Reading & Sharing!" image
+  withCta?: boolean
 }
 
 export default function ContentModal({
@@ -29,6 +40,7 @@ export default function ContentModal({
   onRefine,
   notice,
   generatedImages,
+  withCta,
 }: ContentModalProps) {
   const [refinementText, setRefinementText] = useState('')
   const [copiedText, setCopiedText] = useState(false)
@@ -65,8 +77,14 @@ export default function ContentModal({
         .filter((x): x is { item: NewsItem & { Section: string }; src: string } => !!x.src)
     : []
 
+  // Absolute URL: a relative src breaks once the copied HTML is pasted into another site
+  const cta: CtaImage | undefined =
+    withCta && typeof window !== 'undefined'
+      ? { src: new URL(NEWSLETTER_CTA_PATH, window.location.origin).href, alt: NEWSLETTER_CTA_SECTION }
+      : undefined
+
   // Same blocks drive the on-screen view and the copied HTML, so what you see is what you paste
-  const postingBlocks = isNewsletterMulti && content ? buildPostingBlocks(content, sectionImages) : []
+  const postingBlocks = isNewsletterMulti && content ? buildPostingBlocks(content, sectionImages, cta) : []
 
   const handleCopyText = async () => {
     await navigator.clipboard.writeText(content)
@@ -104,7 +122,7 @@ export default function ContentModal({
   // flag Safari requires for `text/html` + `text/plain` clipboard writes.
   const handleCopyAll = async () => {
     try {
-      const html = buildPostingHtml(content, sectionImages)
+      const html = buildPostingHtml(content, sectionImages, cta)
       await navigator.clipboard.write([
         new ClipboardItem({
           'text/html': new Blob([html], { type: 'text/html' }),

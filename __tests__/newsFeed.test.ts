@@ -215,6 +215,32 @@ describe('buildPostingBlocks', () => {
     expect(blocks.filter(b => b.kind === 'image').every(b => b.kind === 'image' && !b.label)).toBe(true)
   })
 
+  describe('closing CTA image', () => {
+    const cta = { src: 'https://site/newsletter-cta.jpg', alt: 'Thanks for Reading & Sharing!' }
+    const tagline = 'Learn AI. Apply AI. Grow with AI.'
+
+    it('goes above the closing tagline, not the identical one that ends the intro', () => {
+      const content = ['Intro title', 'intro body', tagline, 'Top 5 AI World News', 'world body', 'closing line', tagline, '', 'Are You Ready to Dominate AI?'].join('\n')
+      const blocks = buildPostingBlocks(content, [four[0]], cta)
+      const o = order(blocks)
+      expect(o).toEqual(['Intro title', 'IMG:w', 'world body', 'IMG:https://site/newsletter-cta.jpg', tagline])
+      const ctaBlock = blocks.find(b => b.kind === 'image' && b.src === cta.src)
+      expect(ctaBlock && ctaBlock.kind === 'image' && ctaBlock.label).toBe(false)
+      expect(buildPostingHtml(content, [four[0]], cta)).toContain('<img src="https://site/newsletter-cta.jpg"')
+    })
+
+    it('falls back to "Are You Ready to Dominate AI?", then to the end', () => {
+      const ready = buildPostingBlocks(['body', '**Are You Ready to Dominate AI?**'].join('\n'), [], cta)
+      expect(order(ready)).toEqual(['body', 'IMG:https://site/newsletter-cta.jpg', '**Are You Ready to Dominate AI?**'])
+      expect(order(buildPostingBlocks('just body', [], cta))).toEqual(['just body', 'IMG:https://site/newsletter-cta.jpg'])
+    })
+
+    it('is never added unless asked for', () => {
+      const content = ['body', tagline].join('\n')
+      expect(buildPostingBlocks(content, four).some(b => b.kind === 'image' && b.src === cta.src)).toBe(false)
+    })
+  })
+
   it('keeps a whole multi-item group together when its heading is missing', () => {
     const content = ['**AI World of this news**', 'w', 'reworded insights heading', 'ib', '**AI Trending Tool of the week**', 'rb'].join('\n')
     const items = [pick('AI World of this news', 'w'), pick('AI Insights', 'i1'), pick('AI Insights', 'i2'), pick('AI Trending Tool of the week', 'r')]

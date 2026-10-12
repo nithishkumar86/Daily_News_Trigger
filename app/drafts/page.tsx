@@ -76,6 +76,7 @@ export default function DraftsPage() {
           selectedItems={[]}
           format={openJob.kind}
           generatedImages={openImages}
+          withCta={openJob.kind === 'newsletter'}
           notice={
             openStage && openStage.imagesDone < openStage.imagesTotal
               ? `Images ready: ${openStage.imagesDone} of ${openStage.imagesTotal}. The rest appear here automatically after the Codex run.`

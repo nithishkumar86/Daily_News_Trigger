@@ -8,7 +8,7 @@ describe('formats/image-prompt.md', () => {
 
   it('defines one prompt per newsletter section plus the article hero', () => {
     for (const key of ['world', 'tools', 'insights', 'trending']) expect(md).toMatch(new RegExp(`\\|\\s*${key}\\s*\\|`))
-    expect(md).toContain('TOP 5 AI NEWS OF THE WORLD')
+    expect(md).toContain('TOP 5 AI WORLD NEWS')
     expect(md).toContain('TOP 5 AI TOOL UPDATES')
     expect(md).toContain('TOP 5 AI INSIGHTS')
     expect(md).toContain('AI TRENDING TOOL OF THE WEEK')
@@ -23,6 +23,39 @@ describe('formats/image-prompt.md', () => {
     expect(md).toContain('BEST USE CASE:')
     expect(md).toMatch(/teal[\s\S]*purple[\s\S]*green[\s\S]*blue[\s\S]*orange/)
     expect(md).toContain('AI METER')
+  })
+
+  it('Top N images: heading, intro line, one vertical column per story with its two sentences', () => {
+    const layoutA = md.slice(md.indexOf('## Layout A'), md.indexOf('## Layout B'))
+    expect(layoutA).toMatch(/stand on its own/)
+    expect(layoutA).toContain('[INTRO LINE')
+    expect(layoutA).toMatch(/\[N\] tall vertical/)
+    expect(layoutA).toContain('sentence 1: "[SENTENCE 1A]", sentence 2: "[SENTENCE 1B]"')
+    expect(layoutA).toMatch(/copy word for word/)
+    expect(md).toContain('never "TOP 1"')
+  })
+
+  it('world, tools and insights share Layout A, each with its own look from the reference images', () => {
+    const layoutA = md.slice(md.indexOf('## Layout A'), md.indexOf('## Layout B'))
+    for (const key of ['tools', 'insights', 'world']) expect(layoutA).toMatch(new RegExp(`^\\|\\s*${key}\\s*\\|\\s*(bright|gold)`, 'm'))
+    expect(layoutA).toMatch(/\|\s*insights\s*\|\s*gold to bright yellow/)
+    expect(layoutA).not.toContain('FOR STUDENTS')
+  })
+
+  it('trending image is the only one with the five audience use cases, copied word for word', () => {
+    const layoutB = md.slice(md.indexOf('## Layout B'), md.indexOf('## Layout C'))
+    expect(layoutB).toMatch(/only image with the five audience use cases/)
+    for (const t of ['FOR STUDENTS', 'FOR FREELANCERS', 'FOR WORKING PROFESSIONALS', 'FOR BUSINESS OWNERS', 'FOR REAL ESTATE PROFESSIONALS']) expect(layoutB).toContain(t)
+    for (const t of ['BEST USE CASES', 'WHY THIS TOOL IS TRENDING', 'AI DOMINATORS TAKEAWAY', 'TRENDING NOW', 'OF THE WEEK']) expect(layoutB).toContain(t)
+    expect(layoutB).toMatch(/word for word,\s+all five, never shortened/)
+    expect(layoutB).toMatch(/Never invent a feature/)
+  })
+
+  it('insight boxes use only fields the newsletter insight has (no invented Why it matters)', () => {
+    const row = md.split('\n').find(l => /^\|\s*insights\s*\|\s*WHAT IT MEANS:/.test(l))
+    expect(row).toBeDefined()
+    expect(row).toContain('AI DOMINATORS TAKEAWAY:')
+    expect(row).not.toContain('WHY IT MATTERS')
   })
 
   it('forbids invented facts and asks for the output shape the MCP expects', () => {

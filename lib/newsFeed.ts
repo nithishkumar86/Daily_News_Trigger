@@ -88,6 +88,24 @@ function escapeAttr(s: string): string {
 
 export type SectionImage = { item: { Section: string; Title?: string }; src: string }
 
+// The fixed "Thanks for Reading & Sharing!" image every pipeline newsletter ends with.
+// Served from /public; the caller passes an absolute URL so it survives a paste.
+export const NEWSLETTER_CTA_PATH = '/newsletter-cta.jpg'
+export const NEWSLETTER_CTA_SECTION = 'Thanks for Reading & Sharing!'
+export type CtaImage = { src: string; alt: string }
+
+const normLine = (line: string) => line.replace(/[#>*_]/g, '').trim().toLowerCase()
+
+// Line the CTA image goes above: the closing "Learn AI. Apply AI. Grow with AI."
+// (the LAST one, since the intro ends with the same line), else "Are You Ready to
+// Dominate AI?", else -1 (end of the post).
+function ctaAnchor(lines: string[]): number {
+  for (const target of ['learn ai. apply ai. grow with ai.', 'are you ready to dominate ai?']) {
+    for (let j = lines.length - 1; j >= 0; j--) if (normLine(lines[j]) === target) return j
+  }
+  return -1
+}
+
 export type PostingBlock =
   | { kind: 'text'; text: string }
   // label: true when the section's heading wasn't found in the text, so the
@@ -125,7 +143,8 @@ function isSectionHeading(line: string, section: string): boolean {
 // (e.g. reworded by a refinement) goes just before the next matched heading so
 // the order is kept; if no later heading matched, before "My point of view" or
 // at the end. No picked image is ever dropped. Drives both the modal view and the copy.
-export function buildPostingBlocks(content: string, sectionImages: SectionImage[]): PostingBlock[] {
+// cta (pipeline newsletters only) goes just above the closing tagline, see ctaAnchor.
+export function buildPostingBlocks(content: string, sectionImages: SectionImage[], cta?: CtaImage): PostingBlock[] {
   const lines = content.split('\n')
 
   const groups: { section: string; images: SectionImage[] }[] = []
@@ -170,6 +189,13 @@ export function buildPostingBlocks(content: string, sectionImages: SectionImage[
     if (anchor === -1) atEnd.push(...blocks.map(b => ({ ...b, label: true })))
     else blocks.forEach(b => push(before, anchor, { ...b, label: true }))
   })
+
+  if (cta) {
+    const b: PostingBlock = { kind: 'image', section: NEWSLETTER_CTA_SECTION, src: cta.src, alt: cta.alt, label: false }
+    const anchor = ctaAnchor(lines)
+    if (anchor === -1) atEnd.push(b)
+    else push(before, anchor, b)
+  }
 
   const blocks: PostingBlock[] = []
   let buf: string[] = []
@@ -223,8 +249,8 @@ export function markdownToHtml(text: string): string {
 
 // One clipboard-ready HTML blob in the exact order the modal shows.
 // Pure/testable — the clipboard write itself stays in the UI layer.
-export function buildPostingHtml(content: string, sectionImages: SectionImage[]): string {
-  return buildPostingBlocks(content, sectionImages)
+export function buildPostingHtml(content: string, sectionImages: SectionImage[], cta?: CtaImage): string {
+  return buildPostingBlocks(content, sectionImages, cta)
     .map(b =>
       b.kind === 'text'
         ? markdownToHtml(b.text)
