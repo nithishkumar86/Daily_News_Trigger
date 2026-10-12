@@ -58,20 +58,28 @@ For a newsletter, in particular:
 - Match the voice, rhythm and length of the REFERENCE edition in the format file, but never
   copy its facts.
 
-For an article, follow the article format the same way, including its AI METER numbers and
-verdict, which the hero image will reuse.
+For an article, follow the article format the same way: its own layout, emojis, ▸ bullets,
+AI METER block, five audience sections, hashtags and footer, exactly as that file shows. The
+AI METER percentages and verdict are your editorial rating of the news (the only numbers you
+choose yourself).
 
 STEP 5. Check your text before moving on
-Read your whole text again and fix anything that breaks a rule:
-- Every section the format requires is present, in order, with the correct heading and count.
-- Every fact, name, number and date appears in the items. Nothing is invented or guessed.
+Read your whole text again and fix anything that breaks a rule.
+
+Both kinds:
+- Every section the format requires is present, in order, with the correct heading.
+- Every fact, company, product, number and date appears in the items. Nothing is invented or
+  guessed (the article's AI METER rating and "Imagine" scenarios are the only allowed opinions).
+- Plain, natural English. No hype words, no filler, no Tamil script or Tanglish.
+
+Newsletter only (the article keeps the emojis and ▸ bullets its format asks for):
+- Section headings carry the real item count.
 - No emojis. No asterisks, no markdown, no "#" headings, no bullet symbols.
 - No hyphens or dashes of any kind ("-", "–", "—"). Rewrite compound words as two words or
   rephrase. The only exception is an official product or model name spelled with one in the
   items, such as GPT-5.6.
-- Newsletter: all five audience lines under Best Use Cases are full sentences; the closing ends
-  with "Learn AI. Apply AI. Grow with AI." and then "Are You Ready to Dominate AI?".
-- Plain, natural English. No hype words, no filler, no Tamil script or Tanglish.
+- All five audience lines under Best Use Cases are full sentences; the closing ends with
+  "Learn AI. Apply AI. Grow with AI." and then "Are You Ready to Dominate AI?".
 
 STEP 6. Write the image prompts and submit
 Follow the image-prompt format to write the prompts FROM THE TEXT YOU JUST WROTE:
@@ -79,9 +87,13 @@ Follow the image-prompt format to write the prompts FROM THE TEXT YOU JUST WROTE
   Each title is that section's heading in capitals with the same real count
   (for example TOP 3 AI INSIGHTS). world, tools and insights use Layout A with one column
   per story; trending uses Layout B.
-- Article: exactly 1 prompt with section_key hero (Layout C), titled with the article headline.
-- Copy headlines and sentences into the prompts word for word, as the format says, so the
-  images match the text. The year and edition dates come from the item Dates.
+- Article: exactly 1 prompt with section_key hero (Layout C): a cover image for the one AI
+  tool the article is about, titled "UNKNOWN FACTS OF <COMPANY> <TOOL>"
+  (for example UNKNOWN FACTS OF GOOGLE VEO 3.1).
+- Newsletter: copy headlines and sentences into the prompts word for word, as the format
+  says, so the images match the text. The year and edition dates come from the item Dates.
+  Article: the cover carries only the fixed text Layout C lists, with the tool and company
+  names spelled exactly as in the items.
 - Each prompt is complete and self contained, plain text with no markdown fences, and at most
   7500 characters.
 

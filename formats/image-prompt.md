@@ -28,7 +28,8 @@ same real count: "Top 3 AI Insights" becomes TOP 3 AI INSIGHTS with 3 columns. I
 section has one item, use the single heading (AI WORLD NEWS, AI TOOL UPDATE, AI INSIGHT),
 never "TOP 1".
 
-Article → exactly 1 prompt with section_key `hero` and the article's H1 headline as the title.
+Article → exactly 1 prompt with section_key `hero`: a cover image for the one AI tool the
+article is about (Layout C), titled "UNKNOWN FACTS OF <COMPANY> <TOOL>".
 
 ---
 
@@ -233,19 +234,64 @@ What goes where (everything comes from the trending tool section you wrote):
 
 ## Layout C — article hero (hero)
 
+One cover image for the article, built around the ONE AI tool the article is about (from
+the manager's reference "Unknown Facts of Google Veo 3.1" cover). It is a clean title card,
+not an infographic: very little text, all of it large.
+
+Pick the tool:
+- [TOOL]: the main AI tool, product or model the article's headline is about, spelled exactly
+  as in the items, with its version if the items give one (e.g. "Veo 3.1", "GPT-5.6",
+  "Claude Code"). If the article covers several items, use the one its headline is about.
+- [COMPANY]: the company that makes it, only if the items name it (e.g. "Google", "OpenAI").
+  If the tool name already starts with the company ("ChatGPT Work", "Microsoft Copilot") or
+  the items name no company, leave the company line out and show only [TOOL].
+- If the article is not about one tool (a policy or industry story), use the main company or
+  topic the headline names as [TOOL] and leave the company line out.
+
+Write the prompt in this structure, filling every bracket:
+
 ```
-A wide 16:9 landscape infographic (1536x1024), same deep navy neon tech poster style.
-Top: the headline "[ARTICLE H1]" in bold white with a cyan gradient on the key words.
-Center left: a large glowing illustration of the story's subject ([DESCRIBE]).
-Center right: an "AI METER" glass panel with three horizontal glowing bars and labels:
-"Performance [X]%", "Accuracy [Y]%", "Ease of Use [Z]%", and below it "VERDICT: [VERDICT LINE]".
-Bottom: five round glowing icons in a row with labels "Students", "Freelancers",
-"Working Professionals", "Business Owners", "Real Estate Agents".
-Footer text: "aidigitaltamizha.com".
-Style: futuristic, clean, high contrast, sharp typography, all text in English, no watermark.
+A wide 16:9 landscape cover image (1536x1024), ultra detailed, crisp readable text, premium
+tech poster style. Deep navy to black background with a soft [ACCENT] glow on the right and
+faint glowing particles. Very little text, all of it large and sharp.
+
+Left half, left aligned, top to bottom:
+- a rounded pill with a thin glowing [ACCENT] border containing "UNKNOWN FACTS OF" in widely
+  spaced bold white capitals
+- the company name "[COMPANY]" as a huge bold wordmark in the company's own brand colours
+  ([BRAND COLOURS])
+- the tool name "[TOOL]" in huge heavy bold white letters, the largest text in the image
+- a thin vertical [ACCENT] accent bar and, beside it, three lines of light grey text:
+  "Hidden Features," / "Powerful Upgrades &" / "What You Didn't Know"
+
+Right half: a large glowing circular [ACCENT] lens shaped orb, like a camera lens seen from
+the front, with bright neon rings and thin orbit lines sweeping around it, and the tool name
+"[TOOL]" in clean white letters in its dark centre. Around the orb, four round dark glass
+icon badges with glowing [ACCENT] outline icons: [ICON 1] top left, [ICON 2] top right,
+[ICON 3] bottom left, [ICON 4] bottom right.
+
+Bottom right: a rounded glass pill with a thin glowing [ACCENT] border, a small rocket icon
+and two lines of white text: "Smarter. Faster." / "More Powerful."
+
+Style: futuristic, clean, high contrast, neon glow, sharp modern sans serif typography, all
+text in English, no spelling mistakes, no extra text, no watermark, no people.
 ```
 
-Use the exact AI METER numbers and verdict from the article you wrote.
+How to fill it:
+- [ACCENT]: the tool's main brand colour as one glow colour (e.g. electric blue for Google,
+  teal green for OpenAI, warm orange for Anthropic, purple for Meta). Default: electric blue.
+- [BRAND COLOURS]: the company's well known wordmark colours, e.g. Google "G blue, o red,
+  o yellow, g blue, l green, e red". If you are not sure of them, write "in bold white".
+- Icons: [ICON 1] a magnifying glass, [ICON 2] a light bulb, [ICON 3] the icon for the tool's
+  category, [ICON 4] a padlock. Category icons: video → film clapperboard with a play button,
+  image → picture frame, coding → code brackets, chat or assistant → chat bubble, voice or
+  music → microphone, search → globe, data or analytics → bar chart, agent or automation →
+  gear with arrows, robotics → robot arm, anything else → a glowing chip.
+- The title for this prompt (the `title` field) is "UNKNOWN FACTS OF [COMPANY] [TOOL]" in
+  capitals, e.g. "UNKNOWN FACTS OF GOOGLE VEO 3.1" (without [COMPANY] when it is left out).
+- Never write facts, numbers, scores or any other text into this image. The only text is
+  the pill, the company, the tool name (twice), the three subtitle lines and the two
+  tagline lines.
 
 ---
 

@@ -22,7 +22,20 @@ describe('formats/image-prompt.md', () => {
     expect(md).toContain('WHY IT MATTERS:')
     expect(md).toContain('BEST USE CASE:')
     expect(md).toMatch(/teal[\s\S]*purple[\s\S]*green[\s\S]*blue[\s\S]*orange/)
-    expect(md).toContain('AI METER')
+  })
+
+  it('article hero is the "Unknown Facts of <tool>" cover from the manager reference', () => {
+    const layoutC = md.slice(md.indexOf('## Layout C'), md.indexOf('## Output shape'))
+    for (const t of ['"UNKNOWN FACTS OF"', '[COMPANY]', '[TOOL]', '"Hidden Features," / "Powerful Upgrades &" / "What You Didn\'t Know"',
+      '"Smarter. Faster." / "More Powerful."', 'lens shaped orb', 'magnifying glass', 'light bulb', 'padlock', '16:9']) {
+      expect(layoutC).toContain(t)
+    }
+    expect(layoutC).toMatch(/ONE AI tool the article is about/)
+    expect(layoutC).toMatch(/only if the items name it/)
+    expect(layoutC).toMatch(/Never write facts, numbers, scores/)
+    expect(layoutC).not.toContain('AI METER')
+    expect(layoutC).not.toContain('Students')
+    expect(md).toContain('titled "UNKNOWN FACTS OF <COMPANY> <TOOL>"')
   })
 
   it('Top N images: heading, intro line, one vertical column per story with its two sentences', () => {
