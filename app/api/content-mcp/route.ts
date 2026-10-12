@@ -11,7 +11,6 @@ import {
   listPendingImageJobs,
   PipelineResult,
   submitContent,
-  submitImageUrl,
 } from '@/lib/contentPipeline'
 import { checkContentMcpKey } from '@/lib/contentMcpAuth'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -89,18 +88,8 @@ const TOOLS = [
   {
     name: 'claim_image_job',
     description:
-      'Claims an image job so no other run generates it. Returns the exact prompt to generate from. If it says already taken or already done, skip it.',
+      'Claims an image job so no other run generates it. Returns the exact prompt to generate from. If it says already taken or already done, skip it. Send the finished image by POSTing its file bytes to /api/content-mcp/upload?id=<image_job_id>&key=<the same key as this server URL>.',
     inputSchema: { type: 'object', properties: imageJobIdProp, required: ['image_job_id'] },
-  },
-  {
-    name: 'submit_image',
-    description:
-      'Attaches a finished image to a claimed image job from a public https URL. To send a local file instead, POST its bytes to /api/content-mcp/upload?id=<image_job_id>&key=<the same key as this server URL>.',
-    inputSchema: {
-      type: 'object',
-      properties: { ...imageJobIdProp, image_url: { type: 'string', description: 'Public https URL of the PNG/JPEG/WebP image' } },
-      required: ['image_job_id', 'image_url'],
-    },
   },
   {
     name: 'fail_image_job',
@@ -122,12 +111,8 @@ const HANDLERS: Record<string, (sb: SupabaseClient, a: Args) => Promise<Pipeline
   fail_content_job: (sb, a) => failContentJob(sb, a.job_id, a.error),
   list_pending_image_jobs: sb => listPendingImageJobs(sb),
   claim_image_job: (sb, a) => claimImageJob(sb, a.image_job_id),
-  submit_image: (sb, a) => submitImageUrl(sb, a.image_job_id, a.image_url),
   fail_image_job: (sb, a) => failImageJob(sb, a.image_job_id, a.error),
 }
-
-// Image downloads (submit_image) can take a while
-export const maxDuration = 30
 
 const toolText = (payload: unknown, isError = false) => ({
   content: [{ type: 'text', text: typeof payload === 'string' ? payload : JSON.stringify(payload) }],

@@ -238,7 +238,6 @@ export async function failContentJob(sb: SupabaseClient, jobId: unknown, reason:
 
 export const MAX_IMAGE_BYTES = 4 * 1024 * 1024 // stays under Vercel's 4.5 MB request body limit
 const MIN_IMAGE_BYTES = 1024
-const IMAGE_FETCH_TIMEOUT_MS = 20_000
 
 export async function listPendingImageJobs(sb: SupabaseClient) {
   const { data, error } = await sb
@@ -314,40 +313,6 @@ export async function storeImage(sb: SupabaseClient, imageJobId: unknown, bytes:
   if (doneErr) return fail(doneErr.message)
   if (!done) return fail('image job changed state while uploading')
   return ok({ image_job_id: imageJobId, status: 'done', image_url: imageUrl })
-}
-
-// Only public https hosts — never localhost or raw IPs (keeps the server from being used to probe internal addresses)
-function isSafeImageUrl(raw: unknown): raw is string {
-  if (typeof raw !== 'string') return false
-  try {
-    const u = new URL(raw)
-    if (u.protocol !== 'https:') return false
-    const host = u.hostname.toLowerCase()
-    if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.internal')) return false
-    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes(':') || host.startsWith('[')) return false
-    return true
-  } catch {
-    return false
-  }
-}
-
-export async function submitImageUrl(sb: SupabaseClient, imageJobId: unknown, imageUrl: unknown) {
-  if (!isUuid(imageJobId)) return fail('image_job_id must be a UUID')
-  if (!isSafeImageUrl(imageUrl)) return fail('image_url must be a public https URL')
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), IMAGE_FETCH_TIMEOUT_MS)
-  try {
-    const res = await fetch(imageUrl, { signal: controller.signal, redirect: 'error' })
-    if (!res.ok) return fail(`could not download image (HTTP ${res.status})`)
-    const declared = Number(res.headers.get('content-length') ?? 0)
-    if (declared > MAX_IMAGE_BYTES) return fail(`image is too large (max ${MAX_IMAGE_BYTES / 1024 / 1024} MB)`)
-    const bytes = new Uint8Array(await res.arrayBuffer())
-    return storeImage(sb, imageJobId, bytes)
-  } catch (err) {
-    return fail((err as Error).name === 'AbortError' ? 'image download timed out' : 'could not download image')
-  } finally {
-    clearTimeout(timer)
-  }
 }
 
 export async function failImageJob(sb: SupabaseClient, imageJobId: unknown, reason: unknown) {

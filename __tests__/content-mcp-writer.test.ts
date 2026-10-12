@@ -202,6 +202,13 @@ describe('POST /api/content-mcp (JSON-RPC)', () => {
     expect(names).toEqual(expect.arrayContaining(['get_format', 'list_pending_content_jobs', 'claim_content_job', 'submit_content', 'fail_content_job']))
   })
 
+  it('has no URL-fetching submit_image tool (images arrive only through /upload)', async () => {
+    const names = (await (await rpc('tools/list')).json()).result.tools.map((t: { name: string }) => t.name)
+    expect(names).not.toContain('submit_image')
+    const call = await (await rpc('tools/call', { name: 'submit_image', arguments: { image_job_id: ID_A, image_url: 'https://x.y/a.png' } })).json()
+    expect(call.error.code).toBe(-32601)
+  })
+
   it('returns get_format as raw markdown text', async () => {
     const body = await (await rpc('tools/call', { name: 'get_format', arguments: { name: 'image-prompt' } })).json()
     expect(body.result.content[0].text).toContain('TOP 5 AI TOOL UPDATES')

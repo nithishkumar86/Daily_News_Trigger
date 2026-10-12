@@ -8,7 +8,6 @@ import {
   sniffImage,
   STALE_CLAIM_MS,
   storeImage,
-  submitImageUrl,
 } from '@/lib/contentPipeline'
 import { POST as upload } from '@/app/api/content-mcp/upload/route'
 
@@ -94,29 +93,6 @@ describe('storeImage', () => {
     expect((await storeImage(client, IMG_GENERATING, png(100))).ok).toBe(false)
     expect((await storeImage(client, IMG_GENERATING, png(MAX_IMAGE_BYTES + 1))).ok).toBe(false)
     expect(uploads).toHaveLength(0)
-  })
-})
-
-describe('submitImageUrl', () => {
-  const realFetch = global.fetch
-  afterEach(() => { global.fetch = realFetch })
-
-  it.each(['http://cdn.example.com/a.png', 'https://localhost/a.png', 'https://127.0.0.1/a.png', 'https://[::1]/a.png', 'file:///etc/passwd', 'nope'])(
-    'refuses unsafe URL %s without fetching',
-    async url => {
-      global.fetch = jest.fn()
-      const { client } = seeded()
-      expect(await submitImageUrl(client, IMG_GENERATING, url)).toEqual({ ok: false, error: 'image_url must be a public https URL' })
-      expect(global.fetch).not.toHaveBeenCalled()
-    }
-  )
-
-  it('downloads a public https image and stores it', async () => {
-    global.fetch = jest.fn().mockResolvedValue(new Response(jpeg(), { status: 200, headers: { 'content-type': 'image/jpeg' } }))
-    const { client, uploads } = seeded()
-    const r = await submitImageUrl(client, IMG_GENERATING, 'https://files.example.com/out.jpg')
-    expect(r.ok).toBe(true)
-    expect(uploads[0].path).toBe(`generated/${JOB}/world.jpg`)
   })
 })
 
