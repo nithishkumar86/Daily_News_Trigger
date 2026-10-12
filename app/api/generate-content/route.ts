@@ -12,6 +12,9 @@ const FORMAT_CONFIG: Record<Format, { maxItems: number; maxTokens: number; timeo
   linkedin:   { maxItems: 20, maxTokens: 2048, timeoutMs: 30_000, maxHistoryChars: 10_000 },
   newsletter: { maxItems: 30, maxTokens: 4096, timeoutMs: 55_000, maxHistoryChars: 40_000 },
 }
+// Groq (OpenAI-compatible chat completions) — replaced OpenRouter, which charged per call
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
+const GROQ_MODEL = 'openai/gpt-oss-120b'
 const MAX_REFINEMENT_LENGTH = 2000
 const MAX_HISTORY_LENGTH = 20
 
@@ -38,7 +41,7 @@ const clean = (v: unknown, max: number) => String(v ?? '').replace(/[\r\n]/g, ' 
 
 export async function POST(req: NextRequest) {
   // API key guard first — before any I/O
-  const apiKey = process.env.OPENROUTER_API_KEY
+  const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) {
     return NextResponse.json({ error: 'Service not configured' }, { status: 500 })
   }
@@ -117,25 +120,27 @@ export async function POST(req: NextRequest) {
       messages.push({ role: 'user', content: refinementStr })
     }
 
-    // OpenRouter fetch with hard timeout to prevent indefinite function lock-up
+    // Groq fetch with hard timeout to prevent indefinite function lock-up
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), config.timeoutMs)
 
     let response: Response
     try {
-      response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      response = await fetch(GROQ_URL, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://daily-news-trigger.vercel.app',
-          'X-Title': 'AI Digital Tamizah',
         },
         body: JSON.stringify({
-          model: 'openai/gpt-6-luna',
+          model: GROQ_MODEL,
           messages,
           temperature: 0.7,
           max_tokens: config.maxTokens,
+          // gpt-oss is a reasoning model: low effort keeps the token budget for the post,
+          // and the reasoning text is left out of the response
+          reasoning_effort: 'low',
+          include_reasoning: false,
         }),
         signal: controller.signal,
       })
@@ -150,7 +155,7 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok) {
       const errText = await response.text()
-      console.error('OpenRouter error:', response.status, errText)
+      console.error('Groq error:', response.status, errText)
       return NextResponse.json({ error: 'Content generation failed. Please try again.' }, { status: 502 })
     }
 
@@ -160,7 +165,7 @@ export async function POST(req: NextRequest) {
     const truncated = data.choices?.[0]?.finish_reason === 'length'
 
     if (!content || typeof content !== 'string') {
-      console.error('OpenRouter returned no content:', JSON.stringify(data))
+      console.error('Groq returned no content:', JSON.stringify(data))
       return NextResponse.json({ error: 'No content returned from model. Please try again.' }, { status: 502 })
     }
 

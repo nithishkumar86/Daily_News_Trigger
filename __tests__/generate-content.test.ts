@@ -34,17 +34,17 @@ function okResponse(content: string, finish_reason = 'stop') {
   return { ok: true, json: async () => ({ choices: [{ message: { content }, finish_reason }] }) }
 }
 
-// Parsed JSON body sent to OpenRouter on the most recent fetch call
+// Parsed JSON body sent to Groq on the most recent fetch call
 const sentBody = () => JSON.parse(mockFetch.mock.calls[mockFetch.mock.calls.length - 1][1].body)
 
 describe('POST /api/generate-content', () => {
   beforeEach(() => {
-    process.env.OPENROUTER_API_KEY = 'test-key'
+    process.env.GROQ_API_KEY = 'test-key'
   })
 
   afterEach(() => jest.clearAllMocks())
 
-  it('happy path: calls OpenRouter and returns generated content', async () => {
+  it('happy path: calls Groq and returns generated content', async () => {
     mockFetch.mockResolvedValueOnce(okResponse('Generated article text.'))
 
     const res = await POST(buildRequest({ format: 'article', selectedItems: [sampleItem] }))
@@ -56,6 +56,19 @@ describe('POST /api/generate-content', () => {
     expect(json.truncated).toBeUndefined()
   })
 
+  it('linkedin goes to Groq gpt-oss-120b with the server key, never OpenRouter', async () => {
+    mockFetch.mockResolvedValueOnce(okResponse('LinkedIn post.'))
+
+    const res = await POST(buildRequest({ format: 'linkedin', selectedItems: [sampleItem] }))
+    expect(res.status).toBe(200)
+
+    const [url, init] = mockFetch.mock.calls[0]
+    expect(url).toBe('https://api.groq.com/openai/v1/chat/completions')
+    expect(init.headers.Authorization).toBe('Bearer test-key')
+    expect(sentBody()).toMatchObject({ model: 'openai/gpt-oss-120b', reasoning_effort: 'low', include_reasoning: false })
+    expect(JSON.stringify(mockFetch.mock.calls)).not.toMatch(/openrouter/i)
+  })
+
   it('edge case: returns 400 when format is invalid', async () => {
     const res = await POST(buildRequest({ format: 'podcast', selectedItems: [sampleItem] }))
     const json = await res.json()
@@ -64,8 +77,8 @@ describe('POST /api/generate-content', () => {
     expect(json.error).toMatch(/Invalid format/)
   })
 
-  it('error case: returns 500 when OPENROUTER_API_KEY is missing', async () => {
-    delete process.env.OPENROUTER_API_KEY
+  it('error case: returns 500 when GROQ_API_KEY is missing', async () => {
+    delete process.env.GROQ_API_KEY
 
     const res = await POST(buildRequest({ format: 'newsletter', selectedItems: [sampleItem] }))
     const json = await res.json()
@@ -138,7 +151,7 @@ describe('POST /api/generate-content', () => {
     expect(sentBody().messages[2].content.length).toBe(10_000)
   })
 
-  it('returns 504 when OpenRouter times out', async () => {
+  it('returns 504 when Groq times out', async () => {
     mockFetch.mockRejectedValueOnce(Object.assign(new Error('aborted'), { name: 'AbortError' }))
 
     const res = await POST(buildRequest({ format: 'linkedin', selectedItems: [sampleItem] }))
