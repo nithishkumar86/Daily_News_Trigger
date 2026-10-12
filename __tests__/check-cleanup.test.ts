@@ -23,9 +23,12 @@ function buildMockSupabase(lastCleaned: string | null) {
   return { from: jest.fn().mockReturnValue(chain) }
 }
 
-// Calendar date N days before today, derived at runtime — never hardcoded.
+// Calendar date N days before the (frozen) current instant, derived at runtime
+// — never hardcoded. Negative N gives a future date.
 function daysAgo(days: number): string {
-  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const d = new Date(Date.now())
+  d.setUTCDate(d.getUTCDate() - days)
+  return d.toISOString().slice(0, 10)
 }
 
 const successResult = {
@@ -39,13 +42,22 @@ const successResult = {
 
 describe('GET /api/check-cleanup', () => {
   beforeEach(() => {
+    // Freeze the clock at the real current instant so the route and the test
+    // agree on "today" even across a UTC midnight.
+    jest.useFakeTimers({
+      now: Date.now(),
+      doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+    })
     mockRunCleanup.mockResolvedValue(successResult)
   })
 
-  afterEach(() => jest.clearAllMocks())
+  afterEach(() => {
+    jest.useRealTimers()
+    jest.clearAllMocks()
+  })
 
-  it('happy path: runs cleanup when last_cleaned is 8 days old', async () => {
-    mockGetServerSupabase.mockReturnValue(buildMockSupabase(daysAgo(8)))
+  it('happy path: runs cleanup when last_cleaned is several days old', async () => {
+    mockGetServerSupabase.mockReturnValue(buildMockSupabase(daysAgo(3)))
 
     const res = await GET()
     const body = await res.json()
@@ -66,8 +78,8 @@ describe('GET /api/check-cleanup', () => {
     expect(mockRunCleanup).toHaveBeenCalledTimes(1)
   })
 
-  it('boundary: runs cleanup when last_cleaned is exactly 7 days old', async () => {
-    mockGetServerSupabase.mockReturnValue(buildMockSupabase(daysAgo(7)))
+  it('boundary: runs cleanup when last_cleaned is exactly 1 day old (yesterday)', async () => {
+    mockGetServerSupabase.mockReturnValue(buildMockSupabase(daysAgo(1)))
 
     const res = await GET()
     const body = await res.json()
@@ -76,7 +88,7 @@ describe('GET /api/check-cleanup', () => {
     expect(mockRunCleanup).toHaveBeenCalledTimes(1)
   })
 
-  it('edge case: skips when last_cleaned is today', async () => {
+  it('edge case: skips when last_cleaned is today and next_due is tomorrow', async () => {
     const today = daysAgo(0)
     mockGetServerSupabase.mockReturnValue(buildMockSupabase(today))
 
@@ -86,19 +98,18 @@ describe('GET /api/check-cleanup', () => {
     expect(body.cleaned).toBe(false)
     expect(body.message).toBe('Not due')
     expect(body.last_cleaned).toBe(today)
-    expect(body.next_due).toBe(daysAgo(-7))
+    expect(body.next_due).toBe(daysAgo(-1))
     expect(mockRunCleanup).not.toHaveBeenCalled()
   })
 
-  it('edge case: skips when last_cleaned is 3 days ago', async () => {
-    mockGetServerSupabase.mockReturnValue(buildMockSupabase(daysAgo(3)))
+  it('edge case: runs cleanup when last_cleaned is malformed (treated as never cleaned)', async () => {
+    mockGetServerSupabase.mockReturnValue(buildMockSupabase('not-a-date'))
 
     const res = await GET()
     const body = await res.json()
 
-    expect(body.cleaned).toBe(false)
-    expect(body.message).toBe('Not due')
-    expect(mockRunCleanup).not.toHaveBeenCalled()
+    expect(body.cleaned).toBe(true)
+    expect(mockRunCleanup).toHaveBeenCalledTimes(1)
   })
 
   it('error case: returns 500 when a delete failed inside runCleanup', async () => {

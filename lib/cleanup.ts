@@ -6,11 +6,12 @@ import {
   CLEANUP_LOG_TABLE,
   IMAGE_BUCKET,
 } from './supabase'
+import { retentionCutoff } from './retention'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Delete image files older than the cutoff from one bucket folder.
 // Filenames are `${date}-rank${rank}.${ext}` (e.g. 2026-06-30-rank1.jpg),
-// so the date is the first 10 chars — same 7-day cutoff as the DB rows.
+// so the date is the first 10 chars — same retention cutoff as the DB rows.
 async function cleanupBucketFolder(
   supabase: SupabaseClient,
   folder: string,
@@ -44,7 +45,9 @@ export interface CleanupResult {
 
 export async function runCleanup(): Promise<CleanupResult> {
   const supabase = getServerSupabase()
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  // Rolling window: rows dated before the cutoff fall outside the last
+  // RETENTION_DAYS calendar dates and are removed.
+  const cutoff = retentionCutoff(Date.now())
   const errors: string[] = []
 
   // Column is quoted "Date" in Postgres (case-sensitive) — an unquoted `date`
@@ -52,7 +55,7 @@ export async function runCleanup(): Promise<CleanupResult> {
   const { count: aiCount, error: aiErr } = await supabase
     .from(AI_NEWS_TABLE)
     .delete({ count: 'exact' })
-    .lt('Date', sevenDaysAgo)
+    .lt('Date', cutoff)
   if (aiErr) {
     console.error('cleanup ai_news delete failed:', aiErr)
     errors.push(`${AI_NEWS_TABLE}: ${aiErr.message}`)
@@ -61,7 +64,7 @@ export async function runCleanup(): Promise<CleanupResult> {
   const { count: invCount, error: invErr } = await supabase
     .from(INVESTMENT_NEWS_TABLE)
     .delete({ count: 'exact' })
-    .lt('Date', sevenDaysAgo)
+    .lt('Date', cutoff)
   if (invErr) {
     console.error('cleanup investment_news delete failed:', invErr)
     errors.push(`${INVESTMENT_NEWS_TABLE}: ${invErr.message}`)
@@ -70,27 +73,27 @@ export async function runCleanup(): Promise<CleanupResult> {
   const { count: jobCount, error: jobErr } = await supabase
     .from(JOB_NEWS_TABLE)
     .delete({ count: 'exact' })
-    .lt('Date', sevenDaysAgo)
+    .lt('Date', cutoff)
   if (jobErr) {
     console.error('cleanup job_hire_fire delete failed:', jobErr)
     errors.push(`${JOB_NEWS_TABLE}: ${jobErr.message}`)
   }
 
-  // Mirror the DB cleanup in Storage: remove cover images older than 7 days.
+  // Mirror the DB cleanup in Storage: remove cover images dated before the cutoff.
   // Wrapped so a storage hiccup never blocks the DB cleanup / log update.
   let deletedImages = 0
   try {
-    deletedImages += await cleanupBucketFolder(supabase, AI_NEWS_TABLE, sevenDaysAgo)
-    deletedImages += await cleanupBucketFolder(supabase, INVESTMENT_NEWS_TABLE, sevenDaysAgo)
-    deletedImages += await cleanupBucketFolder(supabase, JOB_NEWS_TABLE, sevenDaysAgo)
+    deletedImages += await cleanupBucketFolder(supabase, AI_NEWS_TABLE, cutoff)
+    deletedImages += await cleanupBucketFolder(supabase, INVESTMENT_NEWS_TABLE, cutoff)
+    deletedImages += await cleanupBucketFolder(supabase, JOB_NEWS_TABLE, cutoff)
   } catch {
     // ignore — image cleanup is best-effort
   }
 
   // Only record success when every delete actually succeeded. Stamping
   // `last_cleaned` after a failed delete marks the job done while nothing was
-  // removed, which silently suppresses retries for a full week. Leaving the log
-  // untouched makes the next request retry.
+  // removed, which silently suppresses retries until the next interval. Leaving
+  // the log untouched makes the next request retry.
   const success = errors.length === 0
   if (success) {
     const today = new Date().toISOString().split('T')[0]

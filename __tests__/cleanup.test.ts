@@ -19,45 +19,61 @@ interface TableOutcome {
 
 // One mock client for all delete-path tests. Each news table resolves its own
 // count so a mis-wired table branch surfaces as a wrong `deleted_*` value.
-// `upsert` is shared so tests can assert whether the log was stamped.
+// `upsert` is shared so tests can assert whether the log was stamped, and each
+// table's `lt` mock is exposed so tests can assert the cutoff it received.
 function buildMockSupabase(
   ai: TableOutcome,
   inv: TableOutcome,
   job: TableOutcome
 ) {
   const upsert = jest.fn().mockResolvedValue({ error: null })
+  const ltByTable: Record<string, jest.Mock> = {}
 
-  const makeMockChain = (outcome: TableOutcome) => {
+  const makeMockChain = (table: string, outcome: TableOutcome) => {
     const chain: Record<string, jest.Mock> = {}
     chain.delete = jest.fn().mockReturnValue(chain)
     chain.lt = jest
       .fn()
       .mockResolvedValue({ count: outcome.count, error: outcome.error ?? null })
+    ltByTable[table] = chain.lt
     return chain
   }
 
   const client = {
     from: jest.fn((table: string) => {
-      if (table === 'ai_news') return makeMockChain(ai)
-      if (table === 'investment_news') return makeMockChain(inv)
-      if (table === 'job_hire_fire') return makeMockChain(job)
+      if (table === 'ai_news') return makeMockChain(table, ai)
+      if (table === 'investment_news') return makeMockChain(table, inv)
+      if (table === 'job_hire_fire') return makeMockChain(table, job)
       return { upsert }
     }),
   }
 
-  return { client, upsert }
+  return { client, upsert, ltByTable }
+}
+
+// Calendar date N days before `nowMs` (UTC), derived independently of
+// lib/retention so the cutoff assertion is not tautological.
+function utcDaysBefore(nowMs: number, days: number): string {
+  const d = new Date(nowMs)
+  d.setUTCDate(d.getUTCDate() - days)
+  return d.toISOString().slice(0, 10)
 }
 
 const ok = (count: number | null): TableOutcome => ({ count })
 
 describe('runCleanup', () => {
   let errorSpy: jest.SpyInstance
+  // Frozen at the real current instant — runtime-derived, never hardcoded.
+  let nowMs: number
 
   beforeEach(() => {
+    nowMs = Date.now()
+    jest.useFakeTimers({ now: nowMs, doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] })
     errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
   })
 
   afterEach(() => {
+    jest.useRealTimers()
     jest.clearAllMocks()
     errorSpy.mockRestore()
   })
@@ -74,9 +90,26 @@ describe('runCleanup', () => {
     expect(result.success).toBe(true)
     expect(result.errors).toEqual([])
     expect(upsert).toHaveBeenCalledTimes(1)
+    expect(upsert).toHaveBeenCalledWith(
+      { id: 1, last_cleaned: utcDaysBefore(nowMs, 0) },
+      { onConflict: 'id' }
+    )
   })
 
-  it('edge case: returns zero counts when no rows older than 7 days exist', async () => {
+  it('happy path: deletes every table with the 15-day rolling cutoff (today−14)', async () => {
+    const { client, ltByTable } = buildMockSupabase(ok(0), ok(0), ok(0))
+    mockGetServerSupabase.mockReturnValue(client)
+
+    await runCleanup()
+
+    const expectedCutoff = utcDaysBefore(nowMs, 14)
+    for (const table of ['ai_news', 'investment_news', 'job_hire_fire']) {
+      expect(ltByTable[table]).toHaveBeenCalledTimes(1)
+      expect(ltByTable[table]).toHaveBeenCalledWith('Date', expectedCutoff)
+    }
+  })
+
+  it('edge case: returns zero counts when no rows fall outside the retention window', async () => {
     const { client } = buildMockSupabase(ok(null), ok(null), ok(null))
     mockGetServerSupabase.mockReturnValue(client)
 

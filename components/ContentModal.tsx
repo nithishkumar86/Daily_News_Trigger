@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { NewsItem, ContentFormat, Message } from '@/lib/types'
+import { NEWSLETTER_SECTIONS, SectionImage, buildPostingBlocks, buildPostingHtml, imageSrcOf } from '@/lib/newsFeed'
 import { X } from 'lucide-react'
 
 interface ContentModalProps {
@@ -8,9 +9,14 @@ interface ContentModalProps {
   onClose: () => void
   content: string
   isGenerating: boolean
-  selectedItems: NewsItem[]
+  selectedItems: Array<NewsItem & { Section?: string }>
   format: ContentFormat | null
-  onRefine: (refinement: string) => void
+  // Omitted for pipeline drafts — the refine box is hidden
+  onRefine?: (refinement: string) => void
+  notice?: string
+  // Pipeline infographics (one per newsletter section, or the article hero). When given,
+  // they replace the news-item photos everywhere: on screen and in the copied post.
+  generatedImages?: SectionImage[]
 }
 
 export default function ContentModal({
@@ -21,15 +27,19 @@ export default function ContentModal({
   selectedItems,
   format,
   onRefine,
+  notice,
+  generatedImages,
 }: ContentModalProps) {
   const [refinementText, setRefinementText] = useState('')
   const [copiedText, setCopiedText] = useState(false)
-  const [copiedImage, setCopiedImage] = useState(false)
+  const [copiedKey, setCopiedKey] = useState<string | null>(null)
+  const [copiedAll, setCopiedAll] = useState(false)
 
   if (!isOpen) return null
 
   const firstItem = selectedItems[0]
   const imageSrc = (() => {
+    if (generatedImages) return generatedImages[0]?.src ?? null
     if (!firstItem?.Image) return null
     if (firstItem.Image.startsWith('http')) return firstItem.Image
     if (firstItem.Image.startsWith('data:')) return firstItem.Image
@@ -39,21 +49,39 @@ export default function ContentModal({
     return `data:image/jpeg;base64,${b64}`
   })()
 
+  // Newsletter picks carry a Section tag; article/linkedin selections never do,
+  // so this is false for them and their single-image rendering stays unchanged.
+  const isNewsletterMulti = format === 'newsletter' && (!!generatedImages || selectedItems.some(i => i.Section))
+
+  // Up to 5 items can be picked per section now, so every picked item's image
+  // is collected (was: only the first), grouped by canonical section order.
+  const sectionImages: SectionImage[] = generatedImages
+    ? generatedImages
+    : isNewsletterMulti
+    ? NEWSLETTER_SECTIONS
+        .flatMap(label => selectedItems.filter(i => i.Section === label))
+        .filter((i): i is NewsItem & { Section: string } => !!i.Image)
+        .map(i => ({ item: i, src: imageSrcOf(i.Image) }))
+        .filter((x): x is { item: NewsItem & { Section: string }; src: string } => !!x.src)
+    : []
+
+  // Same blocks drive the on-screen view and the copied HTML, so what you see is what you paste
+  const postingBlocks = isNewsletterMulti && content ? buildPostingBlocks(content, sectionImages) : []
+
   const handleCopyText = async () => {
     await navigator.clipboard.writeText(content)
     setCopiedText(true)
     setTimeout(() => setCopiedText(false), 2000)
   }
 
-  const handleCopyImage = async () => {
-    if (!imageSrc) return
+  const handleCopyImage = async (src: string, key: string) => {
     try {
       const img = new window.Image()
-      if (!imageSrc.startsWith('data:')) img.crossOrigin = 'anonymous'
+      if (!src.startsWith('data:')) img.crossOrigin = 'anonymous'
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve()
         img.onerror = reject
-        img.src = imageSrc
+        img.src = src
       })
       const canvas = document.createElement('canvas')
       canvas.width = img.naturalWidth || 512
@@ -62,15 +90,36 @@ export default function ContentModal({
       const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'))
       if (!blob) throw new Error('blob failed')
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-      setCopiedImage(true)
-      setTimeout(() => setCopiedImage(false), 2000)
+      setCopiedKey(key)
+      setTimeout(() => setCopiedKey(null), 2000)
     } catch {
       alert('Image copy not supported in this browser. Please right-click the image to save it.')
     }
   }
 
+  // Copies one HTML blob (heading → image → body for each of the 4 sections, then
+  // the rest) ready to paste into a posting tool. The HTML itself is built synchronously
+  // by the pure buildPostingHtml helper — no `await` happens before the
+  // clipboard.write call, since an `await` first would drop the user-activation
+  // flag Safari requires for `text/html` + `text/plain` clipboard writes.
+  const handleCopyAll = async () => {
+    try {
+      const html = buildPostingHtml(content, sectionImages)
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([content], { type: 'text/plain' }),
+        }),
+      ])
+      setCopiedAll(true)
+      setTimeout(() => setCopiedAll(false), 2000)
+    } catch {
+      alert('Combined copy not supported in this browser. Please copy the text and images separately.')
+    }
+  }
+
   const handleRefine = () => {
-    if (!refinementText.trim()) return
+    if (!refinementText.trim() || !onRefine) return
     onRefine(refinementText.trim())
     setRefinementText('')
   }
@@ -95,17 +144,30 @@ export default function ContentModal({
         </div>
 
         <div className="p-4 space-y-4">
-          {/* Image Section */}
-          {imageSrc && (
-            <div className="space-y-2">
-              <img src={imageSrc} alt={firstItem?.Title} className="w-full rounded-xl object-cover max-h-64" />
-              <button
-                onClick={handleCopyImage}
-                className="text-xs px-3 py-1 rounded-lg bg-[#1a1a2e] text-[#94a3b8] hover:text-[#f1f5f9] transition-colors"
-              >
-                {copiedImage ? '✅ Image Copied!' : '📋 Copy Image'}
-              </button>
-            </div>
+          {/* Image Section — newsletter images render inline with the text below */}
+          {!isNewsletterMulti && (
+            imageSrc && (
+              <div className="space-y-2">
+                {/* A generated infographic carries text — show it whole, never cropped */}
+                <img
+                  src={imageSrc}
+                  alt={generatedImages?.[0]?.item.Title ?? firstItem?.Title}
+                  className={generatedImages ? 'block w-full h-auto rounded-xl' : 'w-full rounded-xl object-cover max-h-64'}
+                />
+                <button
+                  onClick={() => handleCopyImage(imageSrc, 'single')}
+                  className="text-xs px-3 py-1 rounded-lg bg-[#1a1a2e] text-[#94a3b8] hover:text-[#f1f5f9] transition-colors"
+                >
+                  {copiedKey === 'single' ? '✅ Image Copied!' : '📋 Copy Image'}
+                </button>
+              </div>
+            )
+          )}
+
+          {notice && !isGenerating && (
+            <p className="text-sm text-amber-400 bg-amber-400/10 border border-amber-400/30 rounded-lg px-3 py-2">
+              {notice}
+            </p>
           )}
 
           {/* Generated Content */}
@@ -115,6 +177,22 @@ export default function ContentModal({
                 <span className="inline-block w-4 h-4 border-2 border-[#7c3aed]/30 border-t-[#7c3aed] rounded-full animate-spin" />
                 Generating content...
               </div>
+            ) : isNewsletterMulti ? (
+              <div className="space-y-3">
+                {postingBlocks.map((b, i) =>
+                  b.kind === 'text' ? (
+                    <pre key={i} className="text-[#f1f5f9] text-sm whitespace-pre-wrap font-sans leading-relaxed">
+                      {b.text}
+                    </pre>
+                  ) : (
+                    <div key={i} className="space-y-1">
+                      {b.label && <h4 className="text-[#f1f5f9] text-sm font-semibold">{b.section}</h4>}
+                      {/* Scale the whole image to the modal width — never crop its sides */}
+                      <img src={b.src} alt={b.alt} className="block w-full h-auto rounded-xl" />
+                    </div>
+                  )
+                )}
+              </div>
             ) : (
               <pre className="text-[#f1f5f9] text-sm whitespace-pre-wrap font-sans leading-relaxed">
                 {content}
@@ -122,18 +200,29 @@ export default function ContentModal({
             )}
           </div>
 
-          {/* Copy Content Button */}
+          {/* Copy — newsletter gets ONE button for images + text together */}
           {content && !isGenerating && (
-            <button
-              onClick={handleCopyText}
-              className="text-sm px-4 py-2 rounded-lg bg-[#7c3aed] text-white hover:bg-purple-600 transition-colors"
-            >
-              {copiedText ? '✅ Copied!' : '📋 Copy Content'}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              {isNewsletterMulti ? (
+                <button
+                  onClick={handleCopyAll}
+                  className="text-sm px-4 py-2 rounded-lg bg-[#7c3aed] text-white hover:bg-purple-600 transition-colors"
+                >
+                  {copiedAll ? '✅ Copied! Paste it to post' : '📋 Copy Newsletter (Images + Text)'}
+                </button>
+              ) : (
+                <button
+                  onClick={handleCopyText}
+                  className="text-sm px-4 py-2 rounded-lg bg-[#7c3aed] text-white hover:bg-purple-600 transition-colors"
+                >
+                  {copiedText ? '✅ Copied!' : '📋 Copy Content'}
+                </button>
+              )}
+            </div>
           )}
 
           {/* Refinement Section */}
-          {!isGenerating && content && (
+          {onRefine && !isGenerating && content && (
             <div className="space-y-2 border-t border-[#1e293b] pt-4">
               <p className="text-[#94a3b8] text-xs font-medium">💬 Want to change anything?</p>
               <textarea

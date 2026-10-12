@@ -7,10 +7,12 @@ Write an engaging LinkedIn post based on the provided news item(s).
 Requirements:
 - Hook opening line that grabs attention (no "Exciting news!" clichés)
 - 3-5 concise insight bullets with → prefix
-- Professional yet conversational Tamil tech community tone
+- Professional yet conversational tone for India's tech community
 - End with a question to drive engagement
 - Include relevant hashtags: #AINews #TamilTech #ArtificialIntelligence #AIDigitalTamizah
 - Keep total length 50-80 words
+
+LANGUAGE: Write only in plain English. Do not use Tamil script, Tanglish, or any other language. English words only, including in the hashtags and example references.
 
 Output only For the LinkedIn post content.
 same format you need to follow don't include emoji's or other things

@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-[#0d0d1a] text-[#f1f5f9] min-h-screen antialiased">
         <CleanupTrigger />
         <Navbar />
-        <main className="pt-16">
+        <main className="pt-[92px] lg:pt-16">
           {children}
         </main>
         <script

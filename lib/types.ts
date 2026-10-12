@@ -12,6 +12,9 @@ export interface NewsItem {
 
 export type TableName = 'ai_news' | 'investment_news' | 'job_hire_fire'
 
+// A news row tagged with the table it came from (for multi-table feeds)
+export type FeedItem = NewsItem & { source: TableName }
+
 export interface WebhookBody {
   items: Array<{
     Rank: number

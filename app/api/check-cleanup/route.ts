@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server'
 import { getServerSupabase, CLEANUP_LOG_TABLE } from '@/lib/supabase'
 import { runCleanup } from '@/lib/cleanup'
 
-const CLEANUP_INTERVAL_DAYS = 7
+// Daily rolling window: the check runs at most once per UTC calendar day, and
+// only when a page load fires CleanupTrigger — there is no cron.
+const CLEANUP_INTERVAL_DAYS = 1
 const MS_PER_DAY = 24 * 60 * 60 * 1000
 
 // Parse a YYYY-MM-DD calendar date to UTC midnight. Returns null for anything

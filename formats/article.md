@@ -22,8 +22,10 @@ Requirements:
 - Include an AI METER block with: Performance %, Accuracy %, Ease of Use %, and a Verdict line
 - End with a forward-looking call-to-action (1-2 lines) and a engagement question
 - Include hashtags: #AIDigitalTamizha #TamilNadu #ArtificialIntelligence and topic-relevant tags
-- Professional yet conversational tone — written for Tamil Nadu's working and student population
+- Professional yet conversational tone — written for India's working and student population
 - Do not include meta-commentary about writing the article
+
+LANGUAGE: Write only in plain English. Do not use Tamil script, Tanglish, or any other language. English words only, including hashtags and headings.
 
 Reference style (follow this format Strictly in the  way Don't change the order or alignment):
 

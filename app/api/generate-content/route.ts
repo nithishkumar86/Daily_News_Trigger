@@ -4,11 +4,19 @@ import path from 'path'
 import { Message } from '@/lib/types'
 
 const ALLOWED_FORMATS = ['article', 'newsletter', 'linkedin'] as const
-const MAX_ITEMS = 20
+type Format = (typeof ALLOWED_FORMATS)[number]
+
+// Newsletter is a 10-section, multi-item digest — it needs more items, tokens and time
+const FORMAT_CONFIG: Record<Format, { maxItems: number; maxTokens: number; timeoutMs: number; maxHistoryChars: number }> = {
+  article:    { maxItems: 20, maxTokens: 2048, timeoutMs: 30_000, maxHistoryChars: 10_000 },
+  linkedin:   { maxItems: 20, maxTokens: 2048, timeoutMs: 30_000, maxHistoryChars: 10_000 },
+  newsletter: { maxItems: 30, maxTokens: 4096, timeoutMs: 55_000, maxHistoryChars: 40_000 },
+}
 const MAX_REFINEMENT_LENGTH = 2000
 const MAX_HISTORY_LENGTH = 20
-const MAX_HISTORY_CONTENT_LENGTH = 10_000
-const OPENROUTER_TIMEOUT_MS = 30_000
+
+// Vercel function limit — must exceed the longest per-format timeout
+export const maxDuration = 60
 
 // Cache static format files after first read — they never change at runtime
 const formatCache = new Map<string, string>()
@@ -25,8 +33,8 @@ async function getFormatPrompt(format: string): Promise<string | null> {
   }
 }
 
-// Strip newlines from item fields to prevent prompt delimiter injection
-const clean = (v: unknown) => String(v ?? '').replace(/[\r\n]/g, ' ').trim()
+// Strip newlines from item fields to prevent prompt delimiter injection, and cap length
+const clean = (v: unknown, max: number) => String(v ?? '').replace(/[\r\n]/g, ' ').trim().slice(0, max)
 
 export async function POST(req: NextRequest) {
   // API key guard first — before any I/O
@@ -51,16 +59,17 @@ export async function POST(req: NextRequest) {
     const { format, selectedItems, refinement, history } = rawBody as Record<string, unknown>
 
     // Validate format against allowlist (also guards the path.join below)
-    if (!format || !ALLOWED_FORMATS.includes(format as (typeof ALLOWED_FORMATS)[number])) {
+    if (!format || !ALLOWED_FORMATS.includes(format as Format)) {
       return NextResponse.json({ error: `Invalid format. Must be one of: ${ALLOWED_FORMATS.join(', ')}` }, { status: 400 })
     }
+    const config = FORMAT_CONFIG[format as Format]
 
     // Validate selectedItems
     if (!Array.isArray(selectedItems) || selectedItems.length === 0) {
       return NextResponse.json({ error: 'selectedItems cannot be empty' }, { status: 400 })
     }
-    if (selectedItems.length > MAX_ITEMS) {
-      return NextResponse.json({ error: `Too many items. Maximum is ${MAX_ITEMS}.` }, { status: 400 })
+    if (selectedItems.length > config.maxItems) {
+      return NextResponse.json({ error: `Too many items. Maximum is ${config.maxItems}.` }, { status: 400 })
     }
 
     // Cap refinement length
@@ -80,7 +89,7 @@ export async function POST(req: NextRequest) {
         (m.role === 'user' || m.role === 'assistant') &&
         typeof m.content === 'string'
       )
-      .map(m => ({ role: m.role, content: m.content.slice(0, MAX_HISTORY_CONTENT_LENGTH) }))
+      .map(m => ({ role: m.role, content: m.content.slice(0, config.maxHistoryChars) }))
 
     // Load format prompt — async read, cached after first call
     const systemPrompt = await getFormatPrompt(format as string)
@@ -92,7 +101,9 @@ export async function POST(req: NextRequest) {
     const userContent = selectedItems
       .map((item: unknown) => {
         const i = item as Record<string, unknown>
-        return `Rank: ${clean(i.Rank)}\nTitle: ${clean(i.Title)}\nTopic: ${clean(i.Topic)}\nSummary: ${clean(i.Summary)}\nSource: ${clean(i.Link)}`
+        const section = clean(i.Section, 60)
+        const sectionLine = section ? `Section: ${section}\n` : ''
+        return `Rank: ${clean(i.Rank, 10)}\nDate: ${clean(i.Date, 10)}\n${sectionLine}Title: ${clean(i.Title, 300)}\nTopic: ${clean(i.Topic, 50)}\nSummary: ${clean(i.Summary, 2000)}\nSource: ${clean(i.Link, 500)}`
       })
       .join('\n\n---\n\n')
 
@@ -108,7 +119,7 @@ export async function POST(req: NextRequest) {
 
     // OpenRouter fetch with hard timeout to prevent indefinite function lock-up
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS)
+    const timeoutId = setTimeout(() => controller.abort(), config.timeoutMs)
 
     let response: Response
     try {
@@ -121,10 +132,10 @@ export async function POST(req: NextRequest) {
           'X-Title': 'AI Digital Tamizah',
         },
         body: JSON.stringify({
-          model: 'openai/gpt-4o',
+          model: 'openai/gpt-6-luna',
           messages,
           temperature: 0.7,
-          max_tokens: 2048,
+          max_tokens: config.maxTokens,
         }),
         signal: controller.signal,
       })
@@ -145,6 +156,8 @@ export async function POST(req: NextRequest) {
 
     const data = await response.json()
     const content = data.choices?.[0]?.message?.content
+    // 'length' means the model hit max_tokens — the output is cut off mid-way
+    const truncated = data.choices?.[0]?.finish_reason === 'length'
 
     if (!content || typeof content !== 'string') {
       console.error('OpenRouter returned no content:', JSON.stringify(data))
@@ -159,7 +172,7 @@ export async function POST(req: NextRequest) {
       { role: 'assistant' as const, content },
     ]
 
-    return NextResponse.json({ content, updatedHistory })
+    return NextResponse.json({ content, updatedHistory, ...(truncated ? { truncated: true } : {}) })
   } catch (err) {
     console.error('generate-content unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
