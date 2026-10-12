@@ -196,6 +196,31 @@ describe('POST /api/content-mcp (JSON-RPC)', () => {
     expect((await rpc('ping')).status).toBe(200)
   })
 
+  it('accepts the key as an Authorization Bearer header, and logs only key shapes on refusal', async () => {
+    const withAuth = (auth: string, method = 'ping') =>
+      POST(new Request('http://localhost/api/content-mcp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: auth, 'User-Agent': 'test-agent' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method }),
+      }) as never)
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      expect((await withAuth(`Bearer ${KEY}`)).status).toBe(200)
+      expect((await withAuth(`bearer   ${KEY} `)).status).toBe(200)
+      expect((await withAuth(`Bearer ${KEY}x`)).status).toBe(401)
+      expect((await withAuth('Bearer ')).status).toBe(401)
+      expect((await withAuth(`Basic ${KEY}`)).status).toBe(401)
+      expect((await withAuth('')).status).toBe(401)
+      const logged = warn.mock.calls.map(c => c.join(' ')).join('\n')
+      expect(logged).toContain('bearer len')
+      expect(logged).toContain('other scheme')
+      expect(logged).toContain('test-agent')
+      expect(logged).not.toContain(KEY)
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
   it('initializes and lists the writer tools', async () => {
     expect((await (await rpc('initialize')).json()).result.serverInfo.name).toBe('content-pipeline')
     const names = (await (await rpc('tools/list')).json()).result.tools.map((t: { name: string }) => t.name)
