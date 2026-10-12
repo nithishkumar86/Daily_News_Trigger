@@ -16,12 +16,12 @@ and the text match exactly. Never invent companies, products, figures or dates.
 
 Newsletter → exactly 4 prompts, one per picked section:
 
-| section_key | title (big headline in the image)  | built from section                |
+| section_key | title (big headline in the image)  | built from newsletter section     |
 |-------------|------------------------------------|-----------------------------------|
-| world       | TOP 5 AI NEWS OF THE WORLD         | 1. AI World of this news          |
-| tools       | TOP 5 AI TOOL UPDATES              | 2. AI tools update of the week    |
-| insights    | TOP 5 AI INSIGHTS                  | 3. AI Insights                    |
-| trending    | AI TRENDING TOOL OF THE WEEK       | 4. AI Trending Tool of the week   |
+| world       | TOP 5 AI NEWS OF THE WORLD         | Top N AI World News               |
+| tools       | TOP 5 AI TOOL UPDATES              | Top N AI Tool Updates             |
+| insights    | TOP 5 AI INSIGHTS                  | Top N AI Insights                 |
+| trending    | AI TRENDING TOOL OF THE WEEK       | AI Trending Tool of the Week      |
 
 If a section has fewer than 5 stories, use "TOP N" with the real count (e.g. TOP 3
 AI INSIGHTS) and that many columns.

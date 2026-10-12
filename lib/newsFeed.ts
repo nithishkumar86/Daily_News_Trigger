@@ -94,9 +94,17 @@ export type PostingBlock =
   // section name must be shown above the image instead
   | { kind: 'image'; section: string; src: string; alt: string; label: boolean }
 
+// The headings formats/newsletter.md now asks for ("Top 5 AI Tool Updates", or
+// "AI Tool Update" for a single item), mapped to the canonical section they head.
+const SECTION_HEADING_ALIASES: Record<string, RegExp> = {
+  'ai world of this news': /^(top \d+ )?ai world news$/,
+  'ai tools update of the week': /^(top \d+ )?ai tool updates?$/,
+  'ai insights': /^(top \d+ )?ai insights?$/,
+}
+
 // A line is a section heading only if, once markdown (#, **, numbering like "1.")
-// is stripped, it IS the section name (or starts with it and is short). A body
-// or header-bullet line that merely mentions "AI Insights" never matches.
+// is stripped, it IS the section name (or starts with it and is short) or one of
+// its aliases. A body or header-bullet line that merely mentions "AI Insights" never matches.
 function isSectionHeading(line: string, section: string): boolean {
   const norm = line
     .replace(/^[\s#>*_]+/, '')
@@ -105,7 +113,7 @@ function isSectionHeading(line: string, section: string): boolean {
     .replace(/[\s*_:]+$/, '')
     .toLowerCase()
   const s = section.toLowerCase()
-  return norm === s || (norm.startsWith(s) && norm.length <= s.length + 20)
+  return norm === s || (norm.startsWith(s) && norm.length <= s.length + 20) || !!SECTION_HEADING_ALIASES[s]?.test(norm)
 }
 
 // Splits the generated newsletter into ordered blocks: heading 1 → image(s) 1 →

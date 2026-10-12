@@ -147,6 +147,29 @@ describe('buildPostingBlocks', () => {
     expect(blocks.filter(b => b.kind === 'image').every(b => b.kind === 'image' && !b.label)).toBe(true)
   })
 
+  it('matches the plain "Top N" headings from formats/newsletter.md', () => {
+    const content = [
+      'Top 5 AI World News', 'world body',
+      'Top 3 AI Tool Updates', 'tools body',
+      'AI Insight', 'insights body',
+      'AI Trending Tool of the Week', 'trend body',
+      'Learn AI. Apply AI. Grow with AI.',
+    ].join('\n')
+    const blocks = buildPostingBlocks(content, four)
+    expect(order(blocks)).toEqual([
+      'Top 5 AI World News', 'IMG:w', 'world body',
+      'IMG:t', 'tools body',
+      'IMG:i', 'insights body',
+      'IMG:r', 'trend body',
+    ])
+    expect(blocks.filter(b => b.kind === 'image').every(b => b.kind === 'image' && !b.label)).toBe(true)
+  })
+
+  it('does not treat a body line about top AI tool updates as a heading', () => {
+    const content = ['These are the top 5 AI tool updates this week', 'Top 5 AI Tool Updates', 'tools body'].join('\n')
+    expect(order(buildPostingBlocks(content, [four[1]]))).toEqual(['These are the top 5 AI tool updates this week', 'IMG:t', 'tools body'])
+  })
+
   it('ignores header lines that merely mention a section name', () => {
     const content = [
       '- Big money is flowing into AI Insights and AI tools update of the week stories',
