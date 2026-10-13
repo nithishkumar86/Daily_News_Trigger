@@ -37,6 +37,12 @@ export interface GenerateContentBody {
 
 export type ContentFormat = 'article' | 'newsletter' | 'linkedin'
 
+export interface GenerateCommentReplyBody {
+  postContent: string
+  comment: string
+  name?: string
+}
+
 export interface Message {
   role: 'user' | 'assistant' | 'system'
   content: string

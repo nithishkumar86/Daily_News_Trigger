@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NewsItem, ContentFormat, Message } from '@/lib/types'
 import {
   CtaImage,
@@ -47,7 +47,55 @@ export default function ContentModal({
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
   const [copiedAll, setCopiedAll] = useState(false)
 
+  // Reply to a comment — LinkedIn posts and Drafts newsletters only. postText starts
+  // as the generated content but stays editable, so a reply can still be drafted after
+  // the post was published and this modal reopened or the live content is stale.
+  const [postText, setPostText] = useState(content)
+  const [commenterName, setCommenterName] = useState('')
+  const [commentText, setCommentText] = useState('')
+  const [replyText, setReplyText] = useState('')
+  const [replyLoading, setReplyLoading] = useState(false)
+  const [replyError, setReplyError] = useState('')
+  const [copiedReply, setCopiedReply] = useState(false)
+
+  useEffect(() => {
+    setPostText(content)
+    setReplyText('')
+    setReplyError('')
+  }, [content, format])
+
   if (!isOpen) return null
+
+  const canReply = format === 'linkedin' || format === 'newsletter'
+
+  const handleGenerateReply = async () => {
+    if (!postText.trim() || !commentText.trim() || replyLoading) return
+    setReplyLoading(true)
+    setReplyError('')
+    try {
+      const res = await fetch('/api/generate-comment-reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postContent: postText, comment: commentText, name: commenterName.trim() || undefined }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || typeof json.reply !== 'string') {
+        setReplyError(typeof json.error === 'string' ? json.error : 'Failed to generate a reply. Please try again.')
+        return
+      }
+      setReplyText(json.reply)
+    } catch {
+      setReplyError('Failed to generate a reply. Please try again.')
+    } finally {
+      setReplyLoading(false)
+    }
+  }
+
+  const handleCopyReply = async () => {
+    await navigator.clipboard.writeText(replyText)
+    setCopiedReply(true)
+    setTimeout(() => setCopiedReply(false), 2000)
+  }
 
   const firstItem = selectedItems[0]
   const imageSrc = (() => {
@@ -235,6 +283,76 @@ export default function ContentModal({
                 >
                   {copiedText ? '✅ Copied!' : '📋 Copy Content'}
                 </button>
+              )}
+            </div>
+          )}
+
+          {/* Reply to a Comment — LinkedIn and newsletter only */}
+          {canReply && !isGenerating && (
+            <div className="space-y-3 border-t border-[#1e293b] pt-4">
+              <p className="text-[#94a3b8] text-xs font-medium">Reply to a comment</p>
+
+              <div className="space-y-1">
+                <label className="text-[#64748b] text-xs">
+                  Post or edition text (edit or paste it in if replying later)
+                </label>
+                <textarea
+                  value={postText}
+                  onChange={e => setPostText(e.target.value)}
+                  placeholder="Paste the published post or newsletter edition here"
+                  rows={3}
+                  className="w-full bg-[#0d0d1a] border border-[#1e293b] rounded-xl px-3 py-2 text-sm text-[#f1f5f9] placeholder-[#94a3b8]/50 focus:outline-none focus:border-[#7c3aed] resize-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[#64748b] text-xs">Commenter&apos;s name (optional)</label>
+                <input
+                  type="text"
+                  value={commenterName}
+                  onChange={e => setCommenterName(e.target.value)}
+                  placeholder="e.g. Yazhini"
+                  className="w-full bg-[#0d0d1a] border border-[#1e293b] rounded-xl px-3 py-2 text-sm text-[#f1f5f9] placeholder-[#94a3b8]/50 focus:outline-none focus:border-[#7c3aed]"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[#64748b] text-xs">Reader&apos;s comment</label>
+                <textarea
+                  value={commentText}
+                  onChange={e => setCommentText(e.target.value)}
+                  placeholder="Paste the reader's comment here"
+                  rows={2}
+                  className="w-full bg-[#0d0d1a] border border-[#1e293b] rounded-xl px-3 py-2 text-sm text-[#f1f5f9] placeholder-[#94a3b8]/50 focus:outline-none focus:border-[#7c3aed] resize-none"
+                />
+              </div>
+
+              <button
+                onClick={handleGenerateReply}
+                disabled={!postText.trim() || !commentText.trim() || replyLoading}
+                className="text-sm px-4 py-2 rounded-lg bg-[#1a1a2e] text-[#f1f5f9] hover:bg-[#7c3aed] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {replyLoading ? 'Generating reply...' : 'Generate reply →'}
+              </button>
+
+              {replyError && (
+                <p className="text-sm text-red-400 bg-red-400/10 border border-red-400/30 rounded-lg px-3 py-2">
+                  {replyError}
+                </p>
+              )}
+
+              {replyText && !replyLoading && (
+                <div className="space-y-2">
+                  <pre className="text-[#f1f5f9] text-sm whitespace-pre-wrap font-sans leading-relaxed bg-[#0d0d1a] rounded-xl p-3 border border-[#1e293b]">
+                    {replyText}
+                  </pre>
+                  <button
+                    onClick={handleCopyReply}
+                    className="text-xs px-3 py-1 rounded-lg bg-[#1a1a2e] text-[#94a3b8] hover:text-[#f1f5f9] transition-colors"
+                  >
+                    {copiedReply ? 'Copied!' : 'Copy Reply'}
+                  </button>
+                </div>
               )}
             </div>
           )}

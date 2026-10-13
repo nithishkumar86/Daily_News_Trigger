@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     '/api/generate-content': ['./formats/**/*.md'],
     '/api/content-mcp': ['./formats/**/*.md'],
+    '/api/generate-comment-reply': ['./formats/**/*.md'],
   },
 }
 
