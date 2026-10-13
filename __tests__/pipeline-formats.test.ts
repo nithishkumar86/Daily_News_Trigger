@@ -38,12 +38,14 @@ describe('formats/image-prompt.md', () => {
     expect(md).toContain('titled "UNKNOWN FACTS OF <COMPANY> <TOOL>"')
   })
 
-  it('Top N images: heading, intro line, one vertical column per story with its two sentences', () => {
+  it('Top N images: heading, intro line, one vertical column per story with its why-it-matters explanation (no body paragraph)', () => {
     const layoutA = md.slice(md.indexOf('## Layout A'), md.indexOf('## Layout B'))
     expect(layoutA).toMatch(/stand on its own/)
+    expect(layoutA).toMatch(/readable on a phone screen/)
     expect(layoutA).toContain('[INTRO LINE')
     expect(layoutA).toMatch(/\[N\] tall vertical/)
-    expect(layoutA).toContain('sentence 1: "[SENTENCE 1A]", sentence 2: "[SENTENCE 1B]"')
+    expect(layoutA).toContain('[LABEL A]: "[TEXT 1A]", [LABEL B]: "[TEXT 1B]"')
+    expect(layoutA).not.toMatch(/sentence 1|sentence 2|\[SENTENCE/)
     expect(layoutA).toMatch(/copy word for word/)
     expect(md).toContain('never "TOP 1"')
   })

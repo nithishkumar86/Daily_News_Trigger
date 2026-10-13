@@ -36,10 +36,12 @@ article is about (Layout C), titled "UNKNOWN FACTS OF <COMPANY> <TOOL>".
 ## Layout A — "Top 5" sections (world, tools, insights)
 
 All three Top 5 images (World News, Tool Updates, Insights) use this same structure.
-Goal: the image must stand on its own. A person who never opens the newsletter should
-understand every story just by reading the image. So the image is: the section heading,
-one line saying what the reader will learn, then the section split into vertical columns,
-one per story, each with the story's headline and its two sentences in large, readable text.
+Goal: the image must stand on its own, and must stay readable on a phone screen, so each
+column carries only its headline and a clear "why it matters" explanation, never a body
+paragraph. A person who never opens the newsletter should understand why every story
+matters just by reading the image. So the image is: the section heading, one line saying
+what the reader will learn, then the section split into vertical columns, one per story,
+each with the story's headline and its "why it matters" explanation in large, readable text.
 Only the trending tool image (Layout B) shows the five audience use cases.
 
 Write the prompt in this structure, filling every bracket:
@@ -61,12 +63,12 @@ Each column contains, top to bottom:
 - a large circled number in the column colour next to the story headline in bold capitals, white with its key words in the column colour
 - the company or product name as a clean white wordmark with a simple logo style icon
 - a small glowing illustration that shows the story (describe it: e.g. a project dashboard, a code editor with agent task cards ticked, a cloud data centre, a goal to context to tools to review workflow loop)
-- the story's two sentences as two short paragraphs of large, high contrast white text, easy to read at a glance
-- an icon in a circle plus the label "[LABEL A]" in the column colour and one or two lines of white text
+- an icon in a circle plus the label "[LABEL A]" in the column colour, then its explanation in
+  large, bold, high contrast white text, big enough to read at a glance on a phone screen —
+  this is the column's only explanation, so give it the most visual weight after the headline
 - an icon in a circle plus the label "[LABEL B]" in the column colour and one or two lines of white text
 
 Column 1: headline "[HEADLINE 1]", wordmark "[COMPANY 1]", illustration: [ILLUSTRATION 1],
-sentence 1: "[SENTENCE 1A]", sentence 2: "[SENTENCE 1B]",
 [LABEL A]: "[TEXT 1A]", [LABEL B]: "[TEXT 1B]".
 Column 2: ...  (repeat for every column)
 
@@ -91,10 +93,10 @@ Per section look (from the manager's reference images):
 
 What goes in each column (copy word for word from the entry you wrote, never rewrite):
 - Headline: the entry's numbered headline, without the number.
-- Sentence 1: the key sentence of the entry's first paragraph (what happened).
-- Sentence 2: the key sentence of the entry's second paragraph (what it does or why it is
-  important). If a sentence is longer than 25 words, use its shorter sentence from the same
-  paragraph instead; never invent a new one.
+- [LABEL A] text is the column's only explanation (the entry's body paragraphs are never
+  shown in the image), so it must be the entry's own "Why it matters" / "What it means"
+  line, copied word for word, written as a clear, complete sentence a reader can understand
+  without ever opening the newsletter.
 - The two labelled boxes depend on the section, and only use fields the entry really has:
 
 | section_key | LABEL A           | LABEL B                                              |
@@ -120,7 +122,8 @@ Rules for Layout A:
   better workflows", "Leverage the right tools", "Verify everything", "That's how real AI
   Dominators win.").
 - Keep every text snippet short, because image models garble long text: headline max 8
-  words, each sentence max 25 words, each box max 25 words.
+  words, [LABEL A] max 30 words (it is the column's only explanation, so give it room to be
+  a complete, clear sentence), [LABEL B] max 25 words.
 
 Style reference (columns built from the manager's real images; match their shape and
 length, never copy their facts):
@@ -128,21 +131,16 @@ length, never copy their facts):
 ```
 Tools column 1: headline "GPT-5.6 and ChatGPT Work", wordmark "OpenAI | ChatGPT WORK",
 illustration: a glowing project roadmap dashboard with Research, Analysis, Strategy and
-Execution steps, sentence 1: "OpenAI introduced GPT-5.6 on July 9, alongside ChatGPT Work.",
-sentence 2: "ChatGPT Work is designed to help users connect tools, manage projects and turn
-goals into completed outputs.", WHY IT MATTERS: "ChatGPT is moving beyond individual
-conversations. It is becoming a workspace where AI can analyse information, create
-deliverables and support longer projects.", BEST USE CASE: "Reports, business planning,
-coding, data analysis, campaign creation and multi step project execution."
+Execution steps, WHY IT MATTERS: "ChatGPT is moving beyond individual conversations. It is
+becoming a workspace where AI can analyse information, create deliverables and support
+longer projects.", BEST USE CASE: "Reports, business planning, coding, data analysis,
+campaign creation and multi step project execution."
 
 Insights column 2: headline "INFRASTRUCTURE BECAME THE FUNDING WINNER" with "FUNDING
 WINNER" in orange, wordmarks "baseten $1.5B | SambaNova $1B | supabase $500M",
-illustration: a glowing cloud above rows of neon server racks, sentence 1: "Baseten,
-SambaNova and Supabase attracted a combined $3 billion during the period.", sentence 2:
-"All three help other companies build, deploy or operate technology rather than competing
-only through a consumer chatbot.", WHAT IT MEANS: "The hidden winners of the AI boom may be
-the companies providing computing, databases, deployment systems, energy and data centre
-capacity.", AI DOMINATORS TAKEAWAY: "Cloud AI, data engineering, automation and AI
+illustration: a glowing cloud above rows of neon server racks, WHAT IT MEANS: "The hidden
+winners of the AI boom may be the companies providing computing, databases, deployment
+systems, energy and data centre capacity.", AI DOMINATORS TAKEAWAY: "Cloud AI, data engineering, automation and AI
 deployment are strong career and business opportunities."
 ```
 
