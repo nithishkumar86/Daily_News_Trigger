@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { readFile } from 'fs/promises'
 import path from 'path'
-import { Message } from '@/lib/types'
+import { Message, ReplyMode } from '@/lib/types'
 
 // Same Groq endpoint and model already used for LinkedIn/newsletter generation in
 // /api/generate-content — kept as a local constant here too, matching that route's style.
@@ -15,6 +15,8 @@ const MAX_TOKENS = 200
 const MAX_POST_CHARS = 60_000
 const MAX_COMMENT_CHARS = 2_000
 const MAX_NAME_CHARS = 100
+const DEFAULT_MODE: ReplyMode = 'friendly'
+const VALID_MODES: ReplyMode[] = ['professional', 'friendly']
 
 export const maxDuration = 30
 
@@ -95,7 +97,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
 
-    const { postContent, comment, name } = rawBody as Record<string, unknown>
+    const { postContent, comment, name, mode } = rawBody as Record<string, unknown>
 
     if (typeof postContent !== 'string' || !postContent.trim()) {
       return NextResponse.json({ error: 'postContent is required' }, { status: 400 })
@@ -109,11 +111,15 @@ export async function POST(req: NextRequest) {
     if (name !== undefined && typeof name !== 'string') {
       return NextResponse.json({ error: 'name must be a string' }, { status: 400 })
     }
+    if (mode !== undefined && !VALID_MODES.includes(mode as ReplyMode)) {
+      return NextResponse.json({ error: `mode must be one of: ${VALID_MODES.join(', ')}` }, { status: 400 })
+    }
 
     const cleanedPost = cleanPost(postContent, MAX_POST_CHARS)
     const cleanedComment = cleanComment(comment, MAX_COMMENT_CHARS)
     // Optional — an empty/whitespace-only name is treated the same as no name.
     const cleanedName = cleanComment(name, MAX_NAME_CHARS)
+    const cleanedMode: ReplyMode = (mode as ReplyMode) ?? DEFAULT_MODE
 
     const systemPrompt = await getFormatPrompt()
     if (!systemPrompt) {
@@ -123,6 +129,7 @@ export async function POST(req: NextRequest) {
     const userContent =
       `=== POST START ===\n${cleanedPost}\n=== POST END ===\n\n` +
       `=== NAME START ===\n${cleanedName}\n=== NAME END ===\n\n` +
+      `=== MODE START ===\n${cleanedMode}\n=== MODE END ===\n\n` +
       `=== COMMENT START ===\n${cleanedComment}\n=== COMMENT END ===`
 
     const messages: Message[] = [

@@ -28,8 +28,8 @@ export default function NewsCard({ item, checked, onToggle }: NewsCardProps) {
 
   return (
     <div
-      className={`bg-[#13131f] border rounded-xl overflow-hidden transition-all ${
-        checked ? 'border-[#7c3aed] shadow-lg shadow-purple-900/20' : 'border-[#1e293b]'
+      className={`bg-[--bg-card] border rounded-xl overflow-hidden transition-all ${
+        checked ? 'border-[--accent-purple] shadow-lg shadow-purple-900/20' : 'border-[--border-subtle]'
       }`}
 
     >
@@ -45,11 +45,11 @@ export default function NewsCard({ item, checked, onToggle }: NewsCardProps) {
             onError={() => setImgError(true)}
           />
         ) : (
-          <div className="w-full h-72 sm:h-96 bg-gradient-to-br from-[#1a1a2e] to-[#0d0d1a] flex items-center justify-center">
-            <span className="text-[#2d2d4e] text-6xl font-bold">#{item.Rank}</span>
+          <div className="w-full h-72 sm:h-96 bg-gradient-to-br from-[--bg-elevated] to-[--bg-primary] flex items-center justify-center">
+            <span className="text-[--border-elevated] text-6xl font-bold">#{item.Rank}</span>
           </div>
         )}
-        <span className="absolute top-3 left-3 bg-[#7c3aed] text-white text-base font-bold px-3 py-1 rounded-full shadow-lg">
+        <span className="absolute top-3 left-3 bg-[--accent-purple] text-white text-base font-bold px-3 py-1 rounded-full shadow-lg">
           #{item.Rank}
         </span>
       </div>
@@ -57,16 +57,16 @@ export default function NewsCard({ item, checked, onToggle }: NewsCardProps) {
       {/* Content */}
       <div className="p-4 sm:p-6 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-lg font-medium bg-[#7c3aed]/10 text-[#7c3aed] px-3 py-1 rounded-full uppercase tracking-wider">
+          <span className="text-lg font-medium bg-[--accent-purple]/10 text-[--accent-purple] px-3 py-1 rounded-full uppercase tracking-wider">
             {item.Topic}
           </span>
-          <span className="text-lg text-[#94a3b8]">{item.Date}</span>
+          <span className="text-lg text-[--text-muted]">{item.Date}</span>
         </div>
-        <h3 className="text-[#f1f5f9] font-semibold text-3xl leading-snug line-clamp-3">{item.Title}</h3>
-        <p className={`text-[#94a3b8] text-xl leading-relaxed ${expanded ? '' : 'line-clamp-4'}`}>{item.Summary}</p>
+        <h3 className="text-[--text-primary] font-semibold text-3xl leading-snug line-clamp-3">{item.Title}</h3>
+        <p className={`text-[--text-muted] text-xl leading-relaxed ${expanded ? '' : 'line-clamp-4'}`}>{item.Summary}</p>
         <button
           onClick={() => setExpanded(prev => !prev)}
-          className="text-[#7c3aed] text-base font-medium hover:text-purple-400 transition-colors -mt-1"
+          className="text-[--accent-purple] text-base font-medium hover:text-purple-400 transition-colors -mt-1"
         >
           {expanded ? 'See less ▲' : 'See more ▼'}
         </button>
@@ -75,7 +75,7 @@ export default function NewsCard({ item, checked, onToggle }: NewsCardProps) {
             href={item.Link}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-lg text-[#3b82f6] hover:text-blue-400 transition-colors"
+            className="flex items-center gap-2 text-lg text-[--accent-blue] hover:text-blue-400 transition-colors"
           >
             Read more <ExternalLink size={18} />
           </a>
@@ -84,8 +84,8 @@ export default function NewsCard({ item, checked, onToggle }: NewsCardProps) {
               onClick={() => onToggle(item.id)}
               className={`flex items-center gap-1.5 text-lg px-5 py-2 rounded-full border transition-all ${
                 checked
-                  ? 'bg-[#7c3aed] border-[#7c3aed] text-white'
-                  : 'border-[#1e293b] text-[#94a3b8] hover:border-[#7c3aed] hover:text-[#7c3aed]'
+                  ? 'bg-[--accent-purple] border-[--accent-purple] text-white'
+                  : 'border-[--border-subtle] text-[--text-muted] hover:border-[--accent-purple] hover:text-[--accent-purple]'
               }`}
             >
               {checked ? '✓ Selected' : 'Select'}

@@ -37,10 +37,13 @@ export interface GenerateContentBody {
 
 export type ContentFormat = 'article' | 'newsletter' | 'linkedin'
 
+export type ReplyMode = 'professional' | 'friendly'
+
 export interface GenerateCommentReplyBody {
   postContent: string
   comment: string
   name?: string
+  mode?: ReplyMode
 }
 
 export interface Message {

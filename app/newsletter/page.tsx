@@ -163,12 +163,12 @@ export default function NewsletterPage() {
   const latestDate = items[0]?.Date ?? ''
 
   return (
-    <div className="min-h-screen bg-[#0d0d1a] pb-32 sm:pb-28">
+    <div className="min-h-screen bg-[--bg-primary] pb-32 sm:pb-28">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
 
         <div className="mb-6 pt-4">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#f1f5f9]">Newsletter</h1>
-          <p className="text-[#94a3b8] mt-1 text-sm sm:text-base">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[--text-primary]">Newsletter</h1>
+          <p className="text-[--text-muted] mt-1 text-sm sm:text-base">
             Pick 5 stories each for AI World, AI Tools and AI Insights, then 1 trending tool. Each section moves on automatically once it is full. The rest of the newsletter is written for you.
           </p>
         </div>
@@ -191,25 +191,25 @@ export default function NewsletterPage() {
         {loading ? (
           <div className="flex flex-col gap-3">
             {SKELETON_KEYS.map(i => (
-              <div key={i} className="bg-[#13131f] border border-[#1e293b] rounded-xl h-24 animate-pulse" />
+              <div key={i} className="bg-[--bg-card] border border-[--border-subtle] rounded-xl h-24 animate-pulse" />
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-[#94a3b8] text-center">
+          <div className="flex flex-col items-center justify-center py-24 text-[--text-muted] text-center">
             <div className="text-5xl mb-4" aria-hidden="true">📧</div>
-            <p className="text-lg font-medium text-[#f1f5f9]">No news to pick from yet.</p>
+            <p className="text-lg font-medium text-[--text-primary]">No news to pick from yet.</p>
             <p className="text-sm mt-2">News appears here as soon as the AI agent publishes it.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
             <div className="order-2 lg:order-1 space-y-4">
               <div>
-                <h2 className="text-lg font-semibold text-[#f1f5f9]">{currentStep.heading}</h2>
-                <p className="text-sm text-[#94a3b8] mt-0.5">{currentStep.description}</p>
+                <h2 className="text-lg font-semibold text-[--text-primary]">{currentStep.heading}</h2>
+                <p className="text-sm text-[--text-muted] mt-0.5">{currentStep.description}</p>
               </div>
 
               {currentPool.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-[#94a3b8] text-center border border-dashed border-[#1e293b] rounded-xl">
+                <div className="flex flex-col items-center justify-center py-16 text-[--text-muted] text-center border border-dashed border-[--border-subtle] rounded-xl">
                   <p className="text-sm">{currentStep.emptyLabel}</p>
                 </div>
               ) : (

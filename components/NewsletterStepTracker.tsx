@@ -31,24 +31,24 @@ export default function NewsletterStepTracker({ steps, activeKey, doneKeys, onSe
                 <span
                   className={`flex items-center justify-center w-9 h-9 rounded-full text-sm font-bold border-2 transition-all ${
                     done
-                      ? 'bg-[#7c3aed] border-[#7c3aed] text-white'
+                      ? 'bg-[--accent-purple] border-[--accent-purple] text-white'
                       : active
-                      ? 'border-[#7c3aed] text-[#a78bfa] bg-[#7c3aed]/10'
-                      : 'border-[#1e293b] text-[#94a3b8] bg-[#13131f]'
+                      ? 'border-[--accent-purple] text-[--accent-purple-mid] bg-[--accent-purple]/10'
+                      : 'border-[--border-subtle] text-[--text-muted] bg-[--bg-card]'
                   }`}
                 >
                   {done ? <Check size={16} /> : i + 1}
                 </span>
                 <span
                   className={`text-xs font-medium whitespace-nowrap ${
-                    active ? 'text-[#f1f5f9]' : 'text-[#94a3b8]'
+                    active ? 'text-[--text-primary]' : 'text-[--text-muted]'
                   }`}
                 >
                   {step.shortLabel}
                 </span>
               </button>
               {i < steps.length - 1 && (
-                <div className={`h-0.5 flex-1 min-w-[24px] mx-1 ${done ? 'bg-[#7c3aed]' : 'bg-[#1e293b]'}`} />
+                <div className={`h-0.5 flex-1 min-w-[24px] mx-1 ${done ? 'bg-[--accent-purple]' : 'bg-[--border-subtle]'}`} />
               )}
             </div>
           )

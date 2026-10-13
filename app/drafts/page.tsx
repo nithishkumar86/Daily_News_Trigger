@@ -11,7 +11,7 @@ const ContentModal = dynamic(() => import('@/components/ContentModal'), { ssr: f
 const SKELETON_KEYS = [0, 1, 2]
 
 const TONE_CLASS: Record<StageTone, string> = {
-  waiting: 'bg-[#1e293b] text-[#94a3b8]',
+  waiting: 'bg-[--border-subtle] text-[--text-muted]',
   working: 'bg-amber-400/15 text-amber-300',
   ready: 'bg-emerald-400/15 text-emerald-300',
   failed: 'bg-red-400/15 text-red-300',
@@ -31,11 +31,11 @@ export default function DraftsPage() {
   const openStage = openJob ? jobStage(openJob, images) : null
 
   return (
-    <div className="min-h-screen bg-[#0d0d1a] pb-16">
+    <div className="min-h-screen bg-[--bg-primary] pb-16">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="mb-6 pt-4">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#f1f5f9]">Drafts</h1>
-          <p className="text-[#94a3b8] mt-1 text-sm sm:text-base">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[--text-primary]">Drafts</h1>
+          <p className="text-[--text-muted] mt-1 text-sm sm:text-base">
             Newsletters and articles you submitted. Claude writes them on the morning run, Codex then creates the
             images, and the full copy opens here, ready to post.
           </p>
@@ -46,16 +46,16 @@ export default function DraftsPage() {
         {loading ? (
           <div className="flex flex-col gap-3">
             {SKELETON_KEYS.map(i => (
-              <div key={i} className="bg-[#13131f] border border-[#1e293b] rounded-xl h-28 animate-pulse" />
+              <div key={i} className="bg-[--bg-card] border border-[--border-subtle] rounded-xl h-28 animate-pulse" />
             ))}
           </div>
         ) : jobs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-[#94a3b8] text-center">
+          <div className="flex flex-col items-center justify-center py-24 text-[--text-muted] text-center">
             <div className="text-5xl mb-4" aria-hidden="true">🗂️</div>
-            <p className="text-lg font-medium text-[#f1f5f9]">Nothing submitted yet.</p>
+            <p className="text-lg font-medium text-[--text-primary]">Nothing submitted yet.</p>
             <p className="text-sm mt-2">
-              Pick stories on the <Link href="/newsletter" className="text-[#a78bfa] hover:underline">Newsletter</Link> or{' '}
-              <Link href="/article" className="text-[#a78bfa] hover:underline">Article</Link> page and press Submit.
+              Pick stories on the <Link href="/newsletter" className="text-[--accent-purple-mid] hover:underline">Newsletter</Link> or{' '}
+              <Link href="/article" className="text-[--accent-purple-mid] hover:underline">Article</Link> page and press Submit.
             </p>
           </div>
         ) : (
@@ -100,15 +100,15 @@ function DraftCard({ job, stage, thumbs, onOpen }: DraftCardProps) {
   const titles = job.items.map(i => i.Title).filter(Boolean) as string[]
 
   return (
-    <li className="bg-[#13131f] border border-[#1e293b] rounded-xl p-4 flex flex-col gap-3">
+    <li className="bg-[--bg-card] border border-[--border-subtle] rounded-xl p-4 flex flex-col gap-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#7c3aed]/15 text-[#c4b5fd] shrink-0">
+          <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-[--accent-purple]/15 text-[--accent-purple-light] shrink-0">
             <Icon size={18} />
           </span>
           <div className="min-w-0">
-            <p className="text-[#f1f5f9] font-semibold capitalize">{job.kind}</p>
-            <p className="text-xs text-[#64748b]">
+            <p className="text-[--text-primary] font-semibold capitalize">{job.kind}</p>
+            <p className="text-xs text-[--text-subtle]">
               {formatWhen(job.created_at)} · {job.items.length} {job.items.length === 1 ? 'story' : 'stories'}
             </p>
           </div>
@@ -119,7 +119,7 @@ function DraftCard({ job, stage, thumbs, onOpen }: DraftCardProps) {
       </div>
 
       {titles.length > 0 && (
-        <p className="text-sm text-[#94a3b8] line-clamp-2">
+        <p className="text-sm text-[--text-muted] line-clamp-2">
           {titles.slice(0, 3).join(' · ')}
           {titles.length > 3 && ` · +${titles.length - 3} more`}
         </p>
@@ -129,9 +129,9 @@ function DraftCard({ job, stage, thumbs, onOpen }: DraftCardProps) {
         <div className="flex gap-2">
           {Array.from({ length: stage.imagesTotal }, (_, i) =>
             thumbs[i] ? (
-              <img key={i} src={thumbs[i]} alt="" className="w-16 h-10 object-cover rounded-md border border-[#1e293b]" />
+              <img key={i} src={thumbs[i]} alt="" className="w-16 h-10 object-cover rounded-md border border-[--border-subtle]" />
             ) : (
-              <span key={i} className="w-16 h-10 rounded-md border border-dashed border-[#334155]" aria-hidden="true" />
+              <span key={i} className="w-16 h-10 rounded-md border border-dashed border-[--border-strong]" aria-hidden="true" />
             )
           )}
         </div>
@@ -139,7 +139,7 @@ function DraftCard({ job, stage, thumbs, onOpen }: DraftCardProps) {
           type="button"
           onClick={onOpen}
           disabled={!stage.canOpen}
-          className="min-h-[44px] px-5 py-2 rounded-lg bg-[#7c3aed] text-white text-sm font-medium hover:bg-purple-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="min-h-[44px] px-5 py-2 rounded-lg bg-[--accent-purple] text-white text-sm font-medium hover:bg-purple-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {stage.tone === 'ready' ? 'Open copy →' : 'Preview →'}
         </button>

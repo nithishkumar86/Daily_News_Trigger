@@ -18,7 +18,7 @@ export default function SubmittedBanner({ kind, submittedId, error, onDismiss }:
     <div
       role="status"
       className={`fixed bottom-0 left-0 right-0 z-50 border-t p-4 shadow-2xl ${
-        error ? 'bg-[#1f1315] border-red-900/60' : 'bg-[#13131f] border-[#1e293b]'
+        error ? 'bg-[--bg-danger] border-red-900/60' : 'bg-[--bg-card] border-[--border-subtle]'
       }`}
     >
       <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
@@ -26,9 +26,9 @@ export default function SubmittedBanner({ kind, submittedId, error, onDismiss }:
           {error ? (
             <AlertCircle size={20} className="text-red-400 shrink-0 mt-0.5" />
           ) : (
-            <CheckCircle2 size={20} className="text-[#a78bfa] shrink-0 mt-0.5" />
+            <CheckCircle2 size={20} className="text-[--accent-purple-mid] shrink-0 mt-0.5" />
           )}
-          <p className="text-sm text-[#e2e8f0]">
+          <p className="text-sm text-[--text-soft]">
             {error ? (
               error
             ) : (
@@ -43,7 +43,7 @@ export default function SubmittedBanner({ kind, submittedId, error, onDismiss }:
           {!error && (
             <Link
               href="/drafts"
-              className="min-h-[44px] inline-flex items-center px-5 py-2.5 rounded-lg bg-[#7c3aed] text-white text-sm font-medium hover:bg-purple-600 transition-colors"
+              className="min-h-[44px] inline-flex items-center px-5 py-2.5 rounded-lg bg-[--accent-purple] text-white text-sm font-medium hover:bg-purple-600 transition-colors"
             >
               Open Drafts →
             </Link>
@@ -52,7 +52,7 @@ export default function SubmittedBanner({ kind, submittedId, error, onDismiss }:
             type="button"
             onClick={onDismiss}
             aria-label="Dismiss"
-            className="min-h-[44px] min-w-[44px] flex items-center justify-center text-[#94a3b8] hover:text-[#f1f5f9] transition-colors"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center text-[--text-muted] hover:text-[--text-primary] transition-colors"
           >
             <X size={18} />
           </button>

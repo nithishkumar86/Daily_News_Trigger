@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { NewsItem, ContentFormat, Message } from '@/lib/types'
+import { NewsItem, ContentFormat, Message, ReplyMode } from '@/lib/types'
 import {
   CtaImage,
   NEWSLETTER_CTA_PATH,
@@ -47,11 +47,12 @@ export default function ContentModal({
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
   const [copiedAll, setCopiedAll] = useState(false)
 
-  // Reply to a comment — LinkedIn posts and Drafts newsletters only. postText starts
+  // Reply to a comment — LinkedIn posts, newsletters, and articles, all from Drafts. postText starts
   // as the generated content but stays editable, so a reply can still be drafted after
   // the post was published and this modal reopened or the live content is stale.
   const [postText, setPostText] = useState(content)
   const [commenterName, setCommenterName] = useState('')
+  const [replyMode, setReplyMode] = useState<ReplyMode>('friendly')
   const [commentText, setCommentText] = useState('')
   const [replyText, setReplyText] = useState('')
   const [replyLoading, setReplyLoading] = useState(false)
@@ -66,7 +67,7 @@ export default function ContentModal({
 
   if (!isOpen) return null
 
-  const canReply = format === 'linkedin' || format === 'newsletter'
+  const canReply = format === 'linkedin' || format === 'newsletter' || format === 'article'
 
   const handleGenerateReply = async () => {
     if (!postText.trim() || !commentText.trim() || replyLoading) return
@@ -76,7 +77,12 @@ export default function ContentModal({
       const res = await fetch('/api/generate-comment-reply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postContent: postText, comment: commentText, name: commenterName.trim() || undefined }),
+        body: JSON.stringify({
+          postContent: postText,
+          comment: commentText,
+          name: commenterName.trim() || undefined,
+          mode: replyMode,
+        }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || typeof json.reply !== 'string') {
@@ -198,13 +204,13 @@ export default function ContentModal({
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#13131f] border border-[#1e293b] rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-[--bg-card] border border-[--border-subtle] rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#1e293b] sticky top-0 bg-[#13131f] z-10">
-          <span className="text-[#f1f5f9] font-semibold">
+        <div className="flex items-center justify-between p-4 border-b border-[--border-subtle] sticky top-0 bg-[--bg-card] z-10">
+          <span className="text-[--text-primary] font-semibold">
             {format ? formatLabel[format] : 'Generated Content'}
           </span>
-          <button onClick={onClose} className="text-[#94a3b8] hover:text-[#f1f5f9] transition-colors">
+          <button onClick={onClose} className="text-[--text-muted] hover:text-[--text-primary] transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -222,7 +228,7 @@ export default function ContentModal({
                 />
                 <button
                   onClick={() => handleCopyImage(imageSrc, 'single')}
-                  className="text-xs px-3 py-1 rounded-lg bg-[#1a1a2e] text-[#94a3b8] hover:text-[#f1f5f9] transition-colors"
+                  className="text-xs px-3 py-1 rounded-lg bg-[--bg-elevated] text-[--text-muted] hover:text-[--text-primary] transition-colors"
                 >
                   {copiedKey === 'single' ? '✅ Image Copied!' : '📋 Copy Image'}
                 </button>
@@ -237,22 +243,22 @@ export default function ContentModal({
           )}
 
           {/* Generated Content */}
-          <div className="bg-[#0d0d1a] rounded-xl p-4 border border-[#1e293b]">
+          <div className="bg-[--bg-primary] rounded-xl p-4 border border-[--border-subtle]">
             {isGenerating ? (
-              <div className="flex items-center gap-3 text-[#94a3b8]">
-                <span className="inline-block w-4 h-4 border-2 border-[#7c3aed]/30 border-t-[#7c3aed] rounded-full animate-spin" />
+              <div className="flex items-center gap-3 text-[--text-muted]">
+                <span className="inline-block w-4 h-4 border-2 border-[--accent-purple]/30 border-t-[#7c3aed] rounded-full animate-spin" />
                 Generating content...
               </div>
             ) : isNewsletterMulti ? (
               <div className="space-y-3">
                 {postingBlocks.map((b, i) =>
                   b.kind === 'text' ? (
-                    <pre key={i} className="text-[#f1f5f9] text-sm whitespace-pre-wrap font-sans leading-relaxed">
+                    <pre key={i} className="text-[--text-primary] text-sm whitespace-pre-wrap font-sans leading-relaxed">
                       {b.text}
                     </pre>
                   ) : (
                     <div key={i} className="space-y-1">
-                      {b.label && <h4 className="text-[#f1f5f9] text-sm font-semibold">{b.section}</h4>}
+                      {b.label && <h4 className="text-[--text-primary] text-sm font-semibold">{b.section}</h4>}
                       {/* Scale the whole image to the modal width — never crop its sides */}
                       <img src={b.src} alt={b.alt} className="block w-full h-auto rounded-xl" />
                     </div>
@@ -260,7 +266,7 @@ export default function ContentModal({
                 )}
               </div>
             ) : (
-              <pre className="text-[#f1f5f9] text-sm whitespace-pre-wrap font-sans leading-relaxed">
+              <pre className="text-[--text-primary] text-sm whitespace-pre-wrap font-sans leading-relaxed">
                 {content}
               </pre>
             )}
@@ -272,14 +278,14 @@ export default function ContentModal({
               {isNewsletterMulti ? (
                 <button
                   onClick={handleCopyAll}
-                  className="text-sm px-4 py-2 rounded-lg bg-[#7c3aed] text-white hover:bg-purple-600 transition-colors"
+                  className="text-sm px-4 py-2 rounded-lg bg-[--accent-purple] text-white hover:bg-purple-600 transition-colors"
                 >
                   {copiedAll ? '✅ Copied! Paste it to post' : '📋 Copy Newsletter (Images + Text)'}
                 </button>
               ) : (
                 <button
                   onClick={handleCopyText}
-                  className="text-sm px-4 py-2 rounded-lg bg-[#7c3aed] text-white hover:bg-purple-600 transition-colors"
+                  className="text-sm px-4 py-2 rounded-lg bg-[--accent-purple] text-white hover:bg-purple-600 transition-colors"
                 >
                   {copiedText ? '✅ Copied!' : '📋 Copy Content'}
                 </button>
@@ -287,50 +293,62 @@ export default function ContentModal({
             </div>
           )}
 
-          {/* Reply to a Comment — LinkedIn and newsletter only */}
+          {/* Reply to a Comment — LinkedIn, newsletter, and article drafts */}
           {canReply && !isGenerating && (
-            <div className="space-y-3 border-t border-[#1e293b] pt-4">
-              <p className="text-[#94a3b8] text-xs font-medium">Reply to a comment</p>
+            <div className="space-y-5 border-t border-[--border-subtle] pt-5">
+              <p className="text-[--text-primary] text-base font-semibold">Reply to a comment</p>
 
-              <div className="space-y-1">
-                <label className="text-[#64748b] text-xs">
-                  Post or edition text (edit or paste it in if replying later)
+              <div className="space-y-2">
+                <label className="text-[--text-primary] text-sm font-medium">
+                  Post, edition, or article text (edit or paste it in if replying later)
                 </label>
                 <textarea
                   value={postText}
                   onChange={e => setPostText(e.target.value)}
-                  placeholder="Paste the published post or newsletter edition here"
+                  placeholder="Paste the published post, newsletter edition, or article here"
                   rows={3}
-                  className="w-full bg-[#0d0d1a] border border-[#1e293b] rounded-xl px-3 py-2 text-sm text-[#f1f5f9] placeholder-[#94a3b8]/50 focus:outline-none focus:border-[#7c3aed] resize-none"
+                  className="w-full bg-[--bg-primary] border border-[--border-subtle] rounded-xl px-4 py-3 text-base leading-relaxed text-[--text-primary] placeholder-[--text-muted]/50 focus:outline-none focus:border-[--accent-purple] resize-none"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[#64748b] text-xs">Commenter&apos;s name (optional)</label>
+              <div className="space-y-2">
+                <label className="text-[--text-primary] text-sm font-medium">Commenter&apos;s name (optional)</label>
                 <input
                   type="text"
                   value={commenterName}
                   onChange={e => setCommenterName(e.target.value)}
                   placeholder="e.g. Yazhini"
-                  className="w-full bg-[#0d0d1a] border border-[#1e293b] rounded-xl px-3 py-2 text-sm text-[#f1f5f9] placeholder-[#94a3b8]/50 focus:outline-none focus:border-[#7c3aed]"
+                  className="w-full bg-[--bg-primary] border border-[--border-subtle] rounded-xl px-4 py-3 text-base text-[--text-primary] placeholder-[--text-muted]/50 focus:outline-none focus:border-[--accent-purple]"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[#64748b] text-xs">Reader&apos;s comment</label>
+              <div className="space-y-2">
+                <label className="text-[--text-primary] text-sm font-medium">Reply mode</label>
+                <select
+                  value={replyMode}
+                  onChange={e => setReplyMode(e.target.value as ReplyMode)}
+                  className="w-full bg-[--bg-primary] border border-[--border-subtle] rounded-xl px-4 py-3 text-base font-medium text-[--text-primary] focus:outline-none focus:border-[--accent-purple]"
+                >
+                  <option value="professional">Professional</option>
+                  <option value="friendly">Friendly</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[--text-primary] text-sm font-medium">Reader&apos;s comment</label>
                 <textarea
                   value={commentText}
                   onChange={e => setCommentText(e.target.value)}
                   placeholder="Paste the reader's comment here"
-                  rows={2}
-                  className="w-full bg-[#0d0d1a] border border-[#1e293b] rounded-xl px-3 py-2 text-sm text-[#f1f5f9] placeholder-[#94a3b8]/50 focus:outline-none focus:border-[#7c3aed] resize-none"
+                  rows={3}
+                  className="w-full bg-[--bg-primary] border border-[--border-subtle] rounded-xl px-4 py-3 text-base leading-relaxed text-[--text-primary] placeholder-[--text-muted]/50 focus:outline-none focus:border-[--accent-purple] resize-none"
                 />
               </div>
 
               <button
                 onClick={handleGenerateReply}
                 disabled={!postText.trim() || !commentText.trim() || replyLoading}
-                className="text-sm px-4 py-2 rounded-lg bg-[#1a1a2e] text-[#f1f5f9] hover:bg-[#7c3aed] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto text-base font-medium px-5 py-3 rounded-lg bg-[--accent-purple] text-white hover:bg-purple-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {replyLoading ? 'Generating reply...' : 'Generate reply →'}
               </button>
@@ -343,12 +361,12 @@ export default function ContentModal({
 
               {replyText && !replyLoading && (
                 <div className="space-y-2">
-                  <pre className="text-[#f1f5f9] text-sm whitespace-pre-wrap font-sans leading-relaxed bg-[#0d0d1a] rounded-xl p-3 border border-[#1e293b]">
+                  <pre className="text-[--text-primary] text-base whitespace-pre-wrap font-sans leading-relaxed bg-[--bg-primary] rounded-xl p-4 border border-[--border-subtle]">
                     {replyText}
                   </pre>
                   <button
                     onClick={handleCopyReply}
-                    className="text-xs px-3 py-1 rounded-lg bg-[#1a1a2e] text-[#94a3b8] hover:text-[#f1f5f9] transition-colors"
+                    className="text-sm px-3 py-1.5 rounded-lg bg-[--bg-elevated] text-[--text-muted] hover:text-[--text-primary] transition-colors"
                   >
                     {copiedReply ? 'Copied!' : 'Copy Reply'}
                   </button>
@@ -359,19 +377,19 @@ export default function ContentModal({
 
           {/* Refinement Section */}
           {onRefine && !isGenerating && content && (
-            <div className="space-y-2 border-t border-[#1e293b] pt-4">
-              <p className="text-[#94a3b8] text-xs font-medium">💬 Want to change anything?</p>
+            <div className="space-y-2 border-t border-[--border-subtle] pt-4">
+              <p className="text-[--text-muted] text-xs font-medium">💬 Want to change anything?</p>
               <textarea
                 value={refinementText}
                 onChange={e => setRefinementText(e.target.value)}
                 placeholder='e.g. "Make it shorter", "Change tone to casual", "Add more technical detail"'
                 rows={3}
-                className="w-full bg-[#0d0d1a] border border-[#1e293b] rounded-xl px-3 py-2 text-sm text-[#f1f5f9] placeholder-[#94a3b8]/50 focus:outline-none focus:border-[#7c3aed] resize-none"
+                className="w-full bg-[--bg-primary] border border-[--border-subtle] rounded-xl px-3 py-2 text-sm text-[--text-primary] placeholder-[--text-muted]/50 focus:outline-none focus:border-[--accent-purple] resize-none"
               />
               <button
                 onClick={handleRefine}
                 disabled={!refinementText.trim()}
-                className="text-sm px-4 py-2 rounded-lg bg-[#1a1a2e] text-[#f1f5f9] hover:bg-[#7c3aed] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="text-sm px-4 py-2 rounded-lg bg-[--bg-elevated] text-[--text-primary] hover:bg-[--accent-purple] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Regenerate with changes →
               </button>

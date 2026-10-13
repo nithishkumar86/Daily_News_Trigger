@@ -31,18 +31,18 @@ export default function ArticlePage() {
   const latestDate = items[0]?.Date ?? ''
 
   return (
-    <div className="min-h-screen bg-[#0d0d1a] pb-32 sm:pb-28">
+    <div className="min-h-screen bg-[--bg-primary] pb-32 sm:pb-28">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
 
         <div className="mb-6 pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#f1f5f9]">Article</h1>
-            <p className="text-[#94a3b8] mt-1 text-sm sm:text-base">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[--text-primary]">Article</h1>
+            <p className="text-[--text-muted] mt-1 text-sm sm:text-base">
               AI tools news — select tools and submit an article (best with 1–3). It is written and illustrated on the next morning run.
             </p>
           </div>
           {!loading && items.length > 0 && (
-            <span className="self-start sm:self-auto inline-flex items-center px-3 py-1 rounded-full bg-[#1a1a2e] border border-[#1e293b] text-[#94a3b8] text-xs font-medium">
+            <span className="self-start sm:self-auto inline-flex items-center px-3 py-1 rounded-full bg-[--bg-elevated] border border-[--border-subtle] text-[--text-muted] text-xs font-medium">
               {items.length} {items.length === 1 ? 'tool' : 'tools'}
             </span>
           )}
@@ -54,13 +54,13 @@ export default function ArticlePage() {
         {loading ? (
           <div className="flex flex-col gap-6">
             {SKELETON_KEYS.map(i => (
-              <div key={i} className="bg-[#13131f] border border-[#1e293b] rounded-xl h-96 animate-pulse" />
+              <div key={i} className="bg-[--bg-card] border border-[--border-subtle] rounded-xl h-96 animate-pulse" />
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-[#94a3b8] text-center">
+          <div className="flex flex-col items-center justify-center py-24 text-[--text-muted] text-center">
             <div className="text-5xl mb-4" aria-hidden="true">🛠️</div>
-            <p className="text-lg font-medium text-[#f1f5f9]">No AI tools news yet.</p>
+            <p className="text-lg font-medium text-[--text-primary]">No AI tools news yet.</p>
             <p className="text-sm mt-2">Tools stories appear here as soon as the AI agent publishes them.</p>
           </div>
         ) : (

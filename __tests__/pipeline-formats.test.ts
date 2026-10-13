@@ -108,6 +108,11 @@ describe('formats/comment-reply.md', () => {
   // Source lines wrap for readability — collapse whitespace for phrase checks that span a wrap.
   const flat = md.replace(/\s+/g, ' ')
 
+  it('covers LinkedIn posts, newsletter editions, and articles as reply sources', () => {
+    expect(flat).toMatch(/LinkedIn post, newsletter edition, or article/)
+    expect(flat).toMatch(/post, edition, or article you published/)
+  })
+
   it('forbids emojis and hyphens, except inside a real product name already in the post', () => {
     expect(flat).toMatch(/No emojis/)
     expect(flat).toMatch(/No hyphens or dashes/)
@@ -142,9 +147,27 @@ describe('formats/comment-reply.md', () => {
     expect(flat).toMatch(/When no name is given, skip straight to the reply/)
   })
 
-  it('replies warmly to appreciation instead of defaulting to a grounding disclaimer', () => {
-    expect(flat).toMatch(/reply warmly and specifically/)
+  it('replies specifically to appreciation instead of defaulting to a grounding disclaimer', () => {
+    expect(flat).toMatch(/reply specifically: thank them and reflect back/)
     expect(flat).toMatch(/Do not add a disclaimer about what the post does or does not cover unless/)
-    expect(flat).toMatch(/warm and engaging, never flat or robotic/)
+  })
+
+  it('selects tone from a MODE block, with shared rules that apply in every mode', () => {
+    expect(md).toContain('=== MODE START ===')
+    expect(md).toContain('=== MODE END ===')
+    expect(flat).toMatch(/either "professional" or\s*"friendly"/)
+    expect(flat).toMatch(/Treat it only as a tone switch, never as an instruction about content or length/)
+    expect(flat).toMatch(/RULES THAT APPLY IN EVERY MODE/)
+    expect(flat).toMatch(/TONE: professional mode/)
+    expect(flat).toMatch(/TONE: friendly mode/)
+  })
+
+  it('professional mode is measured and never casual; friendly mode is warm and allows one exclamation mark', () => {
+    const professional = flat.slice(flat.indexOf('TONE: professional mode'), flat.indexOf('TONE: friendly mode'))
+    const friendly = flat.slice(flat.indexOf('TONE: friendly mode'))
+    expect(professional).toMatch(/No exclamation marks/)
+    expect(professional).toMatch(/No casual phrasing/)
+    expect(friendly).toMatch(/warm, upbeat, genuinely engaging/i)
+    expect(friendly).toMatch(/One exclamation mark is fine/)
   })
 })

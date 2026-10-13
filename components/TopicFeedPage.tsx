@@ -53,21 +53,21 @@ export default function TopicFeedPage({
 
   const tabClass = (active: boolean) =>
     `min-h-[44px] py-2 px-5 rounded-full text-base font-medium transition-all whitespace-nowrap ${
-      active ? 'text-white' : 'bg-[#1a1a2e] text-[#94a3b8] hover:bg-[#1e293b]'
+      active ? 'text-white' : 'bg-[--bg-elevated] text-[--text-muted] hover:bg-[--border-subtle]'
     }`
   const tabStyle = (active: boolean) => (active ? { backgroundColor: accent } : undefined)
 
   return (
-    <div className="min-h-screen bg-[#0d0d1a] pb-32 sm:pb-28">
+    <div className="min-h-screen bg-[--bg-primary] pb-32 sm:pb-28">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
 
         <div className="mb-6 sm:mb-8 pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#f1f5f9]">{title}</h1>
-            <p className="text-[#94a3b8] mt-1 text-sm sm:text-base">{subtitle}</p>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[--text-primary]">{title}</h1>
+            <p className="text-[--text-muted] mt-1 text-sm sm:text-base">{subtitle}</p>
           </div>
           {hasItems && (
-            <span className="self-start sm:self-auto inline-flex items-center px-3 py-1 rounded-full bg-[#1a1a2e] border border-[#1e293b] text-[#94a3b8] text-xs font-medium">
+            <span className="self-start sm:self-auto inline-flex items-center px-3 py-1 rounded-full bg-[--bg-elevated] border border-[--border-subtle] text-[--text-muted] text-xs font-medium">
               {filtered.length} {filtered.length === 1 ? countNoun[0] : countNoun[1]}
             </span>
           )}
@@ -112,22 +112,22 @@ export default function TopicFeedPage({
         {loading ? (
           <div className="flex flex-col gap-6 max-w-5xl mx-auto">
             {SKELETON_KEYS.map(i => (
-              <div key={i} className="bg-[#13131f] border border-[#1e293b] rounded-xl h-96 animate-pulse" />
+              <div key={i} className="bg-[--bg-card] border border-[--border-subtle] rounded-xl h-96 animate-pulse" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 sm:py-28 text-[#94a3b8] text-center px-4">
+          <div className="flex flex-col items-center justify-center py-20 sm:py-28 text-[--text-muted] text-center px-4">
             <div className="text-5xl sm:text-6xl mb-4" aria-hidden="true">{emptyIcon}</div>
             {activeTab !== 'all' ? (
               <>
                 <p className="text-base sm:text-lg font-medium">
-                  No <span className="text-[#f1f5f9] capitalize">{activeTab}</span> news yet.
+                  No <span className="text-[--text-primary] capitalize">{activeTab}</span> news yet.
                 </p>
                 <p className="text-sm mt-2">Try selecting a different topic above.</p>
               </>
             ) : (
               <>
-                <p className="text-base sm:text-lg font-medium text-[#f1f5f9]">No {emptyLabel} yet.</p>
+                <p className="text-base sm:text-lg font-medium text-[--text-primary]">No {emptyLabel} yet.</p>
                 <p className="text-sm mt-2">Check back after 9 AM when the AI agent runs.</p>
               </>
             )}

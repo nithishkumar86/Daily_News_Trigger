@@ -16,12 +16,12 @@ export default function LatestPage() {
   const latestDate = items[0]?.Date ?? ''
 
   return (
-    <div className="min-h-screen bg-[#0d0d1a] pb-16">
+    <div className="min-h-screen bg-[--bg-primary] pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
 
         <div className="mb-6 sm:mb-8 pt-4">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#f1f5f9]">Latest Trending</h1>
-          <p className="text-[#94a3b8] mt-1 text-sm sm:text-base">Most viral AI news, newest first</p>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[--text-primary]">Latest Trending</h1>
+          <p className="text-[--text-muted] mt-1 text-sm sm:text-base">Most viral AI news, newest first</p>
         </div>
 
         {error && <p className="mb-4 text-sm text-red-400">{error}</p>}
@@ -29,11 +29,11 @@ export default function LatestPage() {
         {loading ? (
           <div className="flex flex-col gap-6 max-w-5xl mx-auto">
             {SKELETON_KEYS.map(i => (
-              <div key={i} className="bg-[#13131f] border border-[#1e293b] rounded-xl h-96 animate-pulse" />
+              <div key={i} className="bg-[--bg-card] border border-[--border-subtle] rounded-xl h-96 animate-pulse" />
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 sm:py-28 text-[#94a3b8]">
+          <div className="flex flex-col items-center justify-center py-20 sm:py-28 text-[--text-muted]">
             <div className="text-5xl sm:text-6xl mb-4">📰</div>
             <p className="text-base sm:text-lg font-medium">No trending news yet.</p>
             <p className="text-sm mt-2 text-center max-w-xs">Check back after 9 AM when the AI agent runs.</p>

@@ -34,23 +34,23 @@ export default function ContentGeneratorPanel({
   const overLimit = maxItems !== undefined && selectedCount > maxItems
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#13131f] border-t border-[#1e293b] p-4 shadow-2xl">
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-[--bg-card] border-t border-[--border-subtle] p-4 shadow-2xl">
       <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-        <span className="text-[#94a3b8] text-base">
-          <span className="text-[#7c3aed] font-bold">{selectedCount}</span> item{selectedCount > 1 ? 's' : ''} selected
+        <span className="text-[--text-muted] text-base">
+          <span className="text-[--accent-purple] font-bold">{selectedCount}</span> item{selectedCount > 1 ? 's' : ''} selected
           {overLimit && <span className="ml-2 text-red-400 text-sm">Max {maxItems} items</span>}
         </span>
         <div className="flex items-center gap-3">
           <button
             onClick={onClear}
-            className="min-h-[44px] text-sm text-[#94a3b8] hover:text-[#f1f5f9] transition-colors"
+            className="min-h-[44px] text-sm text-[--text-muted] hover:text-[--text-primary] transition-colors"
           >
             ✕ Clear
           </button>
           <button
             onClick={() => onGenerate(format)}
             disabled={isGenerating || overLimit}
-            className="min-h-[44px] px-5 py-2.5 rounded-lg bg-[#7c3aed] text-white text-base font-medium hover:bg-purple-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="min-h-[44px] px-5 py-2.5 rounded-lg bg-[--accent-purple] text-white text-base font-medium hover:bg-purple-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {isGenerating ? (
               <span className="flex items-center gap-2">

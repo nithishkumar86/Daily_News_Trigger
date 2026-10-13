@@ -67,15 +67,15 @@ export default function NewsletterPickSidebar({ slots, activeKey, onSelect }: Ne
   return (
     <div className="lg:sticky lg:top-20">
       <div className="flex items-center justify-between gap-2 px-1 mb-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-[#94a3b8]">
-          Your picks <span className="normal-case text-[#a78bfa]">{totalPicked}/{totalMax}</span>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-[--text-muted]">
+          Your picks <span className="normal-case text-[--accent-purple-mid]">{totalPicked}/{totalMax}</span>
         </h3>
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => setOpen(o => !o)}
             aria-expanded={open}
-            className="lg:hidden flex items-center gap-1 h-7 px-2.5 rounded-lg border border-[#1e293b] bg-[#13131f] text-xs font-medium text-[#c4b5fd] hover:border-[#7c3aed] hover:bg-[#7c3aed]/20 transition-colors"
+            className="lg:hidden flex items-center gap-1 h-7 px-2.5 rounded-lg border border-[--border-subtle] bg-[--bg-card] text-xs font-medium text-[--accent-purple-light] hover:border-[--accent-purple] hover:bg-[--accent-purple]/20 transition-colors"
           >
             {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             {open ? 'Hide' : 'Show'}
@@ -86,7 +86,7 @@ export default function NewsletterPickSidebar({ slots, activeKey, onSelect }: Ne
             onClick={() => scrollBy(-1)}
             disabled={!canUp}
             aria-label="Scroll picks up"
-            className="flex items-center justify-center w-7 h-7 rounded-lg border border-[#1e293b] bg-[#13131f] text-[#c4b5fd] hover:border-[#7c3aed] hover:bg-[#7c3aed]/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-[#1e293b] disabled:hover:bg-[#13131f]"
+            className="flex items-center justify-center w-7 h-7 rounded-lg border border-[--border-subtle] bg-[--bg-card] text-[--accent-purple-light] hover:border-[--accent-purple] hover:bg-[--accent-purple]/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-[--border-subtle] disabled:hover:bg-[--bg-card]"
           >
             <ChevronUp size={16} />
           </button>
@@ -95,7 +95,7 @@ export default function NewsletterPickSidebar({ slots, activeKey, onSelect }: Ne
             onClick={() => scrollBy(1)}
             disabled={!canDown}
             aria-label="Scroll picks down"
-            className="flex items-center justify-center w-7 h-7 rounded-lg border border-[#1e293b] bg-[#13131f] text-[#c4b5fd] hover:border-[#7c3aed] hover:bg-[#7c3aed]/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-[#1e293b] disabled:hover:bg-[#13131f]"
+            className="flex items-center justify-center w-7 h-7 rounded-lg border border-[--border-subtle] bg-[--bg-card] text-[--accent-purple-light] hover:border-[--accent-purple] hover:bg-[--accent-purple]/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-[--border-subtle] disabled:hover:bg-[--bg-card]"
           >
             <ChevronDown size={16} />
           </button>
@@ -116,13 +116,13 @@ export default function NewsletterPickSidebar({ slots, activeKey, onSelect }: Ne
                 onClick={() => onSelect(slot.key)}
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-full border text-xs font-medium transition-colors ${
                   active
-                    ? 'border-[#7c3aed] bg-[#7c3aed]/15 text-[#f1f5f9]'
-                    : 'border-[#1e293b] bg-[#13131f] text-[#94a3b8]'
+                    ? 'border-[--accent-purple] bg-[--accent-purple]/15 text-[--text-primary]'
+                    : 'border-[--border-subtle] bg-[--bg-card] text-[--text-muted]'
                 }`}
               >
-                {full && <Check size={12} className="text-[#a78bfa]" />}
+                {full && <Check size={12} className="text-[--accent-purple-mid]" />}
                 {slot.shortLabel ?? slot.label}
-                <span className={full ? 'text-[#c4b5fd]' : 'text-[#64748b]'}>
+                <span className={full ? 'text-[--accent-purple-light]' : 'text-[--text-subtle]'}>
                   {slot.items.length}/{slot.max}
                 </span>
               </button>
@@ -150,10 +150,10 @@ export default function NewsletterPickSidebar({ slots, activeKey, onSelect }: Ne
                   onClick={() => onSelect(slot.key)}
                   className={`text-left rounded-xl border transition-all overflow-hidden ${
                     active
-                      ? 'border-[#7c3aed] bg-[#7c3aed]/10 shadow-[0_0_0_1px_rgba(124,58,237,0.3)]'
+                      ? 'border-[--accent-purple] bg-[--accent-purple]/10 shadow-[0_0_0_1px_rgba(124,58,237,0.3)]'
                       : count > 0
-                      ? 'border-[#1e293b] bg-[#13131f] hover:border-[#334155]'
-                      : 'border-dashed border-[#1e293b] bg-[#0d0d1a] hover:border-[#334155]'
+                      ? 'border-[--border-subtle] bg-[--bg-card] hover:border-[--border-strong]'
+                      : 'border-dashed border-[--border-subtle] bg-[--bg-primary] hover:border-[--border-strong]'
                   }`}
                 >
                   {/* Section header: step number / tick, heading, n/max badge */}
@@ -161,20 +161,20 @@ export default function NewsletterPickSidebar({ slots, activeKey, onSelect }: Ne
                     <span className="flex items-center gap-2 min-w-0">
                       <span
                         className={`flex items-center justify-center w-6 h-6 rounded-full shrink-0 text-xs font-bold ${
-                          full ? 'bg-[#7c3aed] text-white' : active ? 'bg-[#7c3aed]/30 text-[#c4b5fd]' : 'bg-[#1e293b] text-[#94a3b8]'
+                          full ? 'bg-[--accent-purple] text-white' : active ? 'bg-[--accent-purple]/30 text-[--accent-purple-light]' : 'bg-[--border-subtle] text-[--text-muted]'
                         }`}
                       >
                         {full ? <Check size={13} /> : slotIndex + 1}
                       </span>
-                      <span className="text-sm font-semibold text-[#f1f5f9] leading-tight">{slot.label}</span>
+                      <span className="text-sm font-semibold text-[--text-primary] leading-tight">{slot.label}</span>
                     </span>
                     <span
                       className={`shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
                         full
-                          ? 'bg-[#7c3aed]/20 text-[#c4b5fd]'
+                          ? 'bg-[--accent-purple]/20 text-[--accent-purple-light]'
                           : count > 0
-                          ? 'bg-[#1e293b] text-[#a78bfa]'
-                          : 'bg-[#1e293b] text-[#64748b]'
+                          ? 'bg-[--border-subtle] text-[--accent-purple-mid]'
+                          : 'bg-[--border-subtle] text-[--text-subtle]'
                       }`}
                     >
                       {count}/{slot.max}
@@ -182,28 +182,28 @@ export default function NewsletterPickSidebar({ slots, activeKey, onSelect }: Ne
                   </div>
 
                   {/* Progress bar */}
-                  <div className="mx-3 mt-2 h-1 rounded-full bg-[#1e293b] overflow-hidden">
+                  <div className="mx-3 mt-2 h-1 rounded-full bg-[--border-subtle] overflow-hidden">
                     <div
-                      className="h-full bg-[#7c3aed] transition-all"
+                      className="h-full bg-[--accent-purple] transition-all"
                       style={{ width: `${(count / slot.max) * 100}%` }}
                     />
                   </div>
 
                   {/* Numbered list of positions */}
-                  <ol className="px-3 py-2 divide-y divide-[#1e293b]/70">
+                  <ol className="px-3 py-2 divide-y divide-[--border-subtle]/70">
                     {positions.map((item, i) => (
                       <li key={item?.id ?? `empty-${i}`} className="flex items-start gap-2 py-1.5">
                         <span
                           className={`flex items-center justify-center w-5 h-5 mt-px rounded-md shrink-0 text-[11px] font-semibold ${
-                            item ? 'bg-[#7c3aed]/20 text-[#c4b5fd]' : 'border border-dashed border-[#334155] text-[#475569]'
+                            item ? 'bg-[--accent-purple]/20 text-[--accent-purple-light]' : 'border border-dashed border-[--border-strong] text-[--text-faint]'
                           }`}
                         >
                           {i + 1}
                         </span>
                         {item ? (
-                          <span className="text-[13px] leading-snug text-[#e2e8f0] line-clamp-2">{item.Title}</span>
+                          <span className="text-[13px] leading-snug text-[--text-soft] line-clamp-2">{item.Title}</span>
                         ) : (
-                          <span className="text-[13px] leading-snug text-[#475569] italic">Empty</span>
+                          <span className="text-[13px] leading-snug text-[--text-faint] italic">Empty</span>
                         )}
                       </li>
                     ))}
@@ -216,10 +216,10 @@ export default function NewsletterPickSidebar({ slots, activeKey, onSelect }: Ne
 
         {/* Fade hints that there is more above / below */}
         {canUp && (
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-[#0d0d1a] to-transparent rounded-t-xl" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-[--bg-primary] to-transparent rounded-t-xl" />
         )}
         {canDown && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#0d0d1a] to-transparent rounded-b-xl" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[--bg-primary] to-transparent rounded-b-xl" />
         )}
       </div>
 
@@ -227,7 +227,7 @@ export default function NewsletterPickSidebar({ slots, activeKey, onSelect }: Ne
         <button
           type="button"
           onClick={() => scrollBy(1)}
-          className={`${open ? 'flex' : 'hidden'} lg:flex mt-2 w-full items-center justify-center gap-1 py-1.5 rounded-lg border border-[#1e293b] bg-[#13131f] text-xs font-medium text-[#c4b5fd] hover:border-[#7c3aed] hover:bg-[#7c3aed]/20 transition-colors`}
+          className={`${open ? 'flex' : 'hidden'} lg:flex mt-2 w-full items-center justify-center gap-1 py-1.5 rounded-lg border border-[--border-subtle] bg-[--bg-card] text-xs font-medium text-[--accent-purple-light] hover:border-[--accent-purple] hover:bg-[--accent-purple]/20 transition-colors`}
         >
           <ChevronDown size={14} /> More picks below
         </button>

@@ -99,6 +99,37 @@ describe('POST /api/generate-comment-reply', () => {
     expect(mockFetch).not.toHaveBeenCalled()
   })
 
+  it('includes the mode in its own delimited block when given', async () => {
+    mockFetch.mockResolvedValueOnce(okResponse('Reply.'))
+
+    await POST(buildRequest({ postContent: 'Post text.', comment: 'A comment.', mode: 'professional' }))
+    const userMsg = sentBody().messages[1].content as string
+
+    expect(userMsg).toContain('=== MODE START ===')
+    expect(userMsg).toContain('professional')
+    expect(userMsg).toContain('=== MODE END ===')
+  })
+
+  it('mode is optional and defaults to friendly when omitted', async () => {
+    mockFetch.mockResolvedValueOnce(okResponse('Reply.'))
+
+    const res = await POST(buildRequest({ postContent: 'Post text.', comment: 'A comment.' }))
+    expect(res.status).toBe(200)
+    const userMsg = sentBody().messages[1].content as string
+    expect(userMsg).toMatch(/=== MODE START ===\s*friendly\s*=== MODE END ===/)
+  })
+
+  it('400 when mode is not professional or friendly', async () => {
+    const res = await POST(buildRequest({ postContent: 'Post text.', comment: 'A comment.', mode: 'sarcastic' }))
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toMatch(/mode must be one of/)
+    expect(mockFetch).not.toHaveBeenCalled()
+
+    const res2 = await POST(buildRequest({ postContent: 'Post text.', comment: 'A comment.', mode: 123 }))
+    expect(res2.status).toBe(400)
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
   it('500 when GROQ_API_KEY is missing', async () => {
     delete process.env.GROQ_API_KEY
 

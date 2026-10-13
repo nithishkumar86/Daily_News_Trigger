@@ -18,15 +18,29 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0d0d1a',
+  themeColor: '#ffffff',
   width: 'device-width',
   initialScale: 1,
 }
 
+const THEME_INIT_SCRIPT = `
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    if (stored === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+  } catch (e) {}
+})();
+`
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="bg-[#0d0d1a] text-[#f1f5f9] min-h-screen antialiased">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body className="bg-[--bg-primary] text-[--text-primary] min-h-screen antialiased">
         <CleanupTrigger />
         <Navbar />
         <main className="pt-[92px] lg:pt-16">
