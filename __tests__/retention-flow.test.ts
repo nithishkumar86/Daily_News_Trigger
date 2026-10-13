@@ -17,11 +17,18 @@ interface Row {
   Date: string
 }
 
+interface ContentJobRow {
+  id: string
+  status: 'written' | 'failed' | 'pending' | 'writing'
+  created_at: string
+}
+
 interface Store {
   rows: Record<string, Row[]>
   files: Record<string, string[]>
   lastCleaned: string | null
   failDeleteOn: string | null
+  contentJobs: ContentJobRow[]
 }
 
 function utcDaysBefore(nowMs: number, days: number): string {
@@ -34,6 +41,30 @@ function utcDaysBefore(nowMs: number, days: number): string {
 function buildInMemorySupabase(store: Store) {
   return {
     from(table: string) {
+      if (table === 'content_jobs') {
+        return {
+          select: () => ({
+            in: (_col: string, statuses: string[]) => ({
+              lt: async (_col2: string, cutoff: string) => ({
+                data: store.contentJobs
+                  .filter(j => statuses.includes(j.status) && j.created_at < cutoff)
+                  .map(j => ({ id: j.id })),
+                error: null,
+              }),
+            }),
+          }),
+          delete: () => ({
+            in: async (_col: string, ids: string[]) => {
+              const before = store.contentJobs.length
+              store.contentJobs = store.contentJobs.filter(j => !ids.includes(j.id))
+              return { count: before - store.contentJobs.length, error: null }
+            },
+          }),
+        }
+      }
+      if (table === 'image_jobs') {
+        return { delete: () => ({ in: async () => ({ count: 0, error: null }) }) }
+      }
       return {
         select: () => ({
           eq: () => ({
@@ -85,7 +116,7 @@ function seedStore(nowMs: number, lastCleaned: string | null): Store {
     rows[t] = [...keptDates, expiredDate].map(d => ({ Date: d }))
     files[t] = [...keptDates, expiredDate].map(d => `${d}-rank1.jpg`)
   }
-  return { rows, files, lastCleaned, failDeleteOn: null }
+  return { rows, files, lastCleaned, failDeleteOn: null, contentJobs: [] }
 }
 
 describe('retention flow: GET /api/check-cleanup → runCleanup → store', () => {
@@ -162,5 +193,24 @@ describe('retention flow: GET /api/check-cleanup → runCleanup → store', () =
     expect(retried.status).toBe(200)
     expect(store.rows.investment_news).toHaveLength(2)
     expect(store.lastCleaned).toBe(utcDaysBefore(nowMs, 0))
+  })
+
+  it('content jobs: purges written/failed drafts past 30 days, keeps recent and in-flight ones', async () => {
+    const store = seedStore(nowMs, utcDaysBefore(nowMs, 1))
+    store.contentJobs = [
+      { id: 'kept-recent', status: 'written', created_at: new Date(nowMs - 29 * 24 * 60 * 60 * 1000).toISOString() },
+      { id: 'kept-inflight', status: 'pending', created_at: new Date(nowMs - 40 * 24 * 60 * 60 * 1000).toISOString() },
+      { id: 'purged-written', status: 'written', created_at: new Date(nowMs - 31 * 24 * 60 * 60 * 1000).toISOString() },
+      { id: 'purged-failed', status: 'failed', created_at: new Date(nowMs - 45 * 24 * 60 * 60 * 1000).toISOString() },
+    ]
+    mockGetServerSupabase.mockReturnValue(buildInMemorySupabase(store))
+
+    const res = await GET()
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.result.success).toBe(true)
+    expect(body.result.deleted_content_jobs).toBe(2)
+    expect(store.contentJobs.map(j => j.id).sort()).toEqual(['kept-inflight', 'kept-recent'])
   })
 })

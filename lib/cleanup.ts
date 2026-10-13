@@ -6,7 +6,8 @@ import {
   CLEANUP_LOG_TABLE,
   IMAGE_BUCKET,
 } from './supabase'
-import { retentionCutoff } from './retention'
+import { CONTENT_JOBS_TABLE, IMAGE_JOBS_TABLE } from './contentPipeline'
+import { retentionCutoff, contentRetentionCutoff } from './retention'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Delete image files older than the cutoff from one bucket folder.
@@ -34,12 +35,66 @@ async function cleanupBucketFolder(
   return rmErr ? 0 : toDelete.length
 }
 
+// Removes finished generated drafts (content_jobs) older than the content
+// cutoff, plus their image_jobs rows and uploaded images. Only 'written' and
+// 'failed' jobs qualify — 'pending'/'writing'/'generating' are still in
+// flight and must never be purged regardless of age.
+async function cleanupContentJobs(
+  supabase: SupabaseClient,
+  cutoffIso: string
+): Promise<{ deletedJobs: number; deletedImages: number; errors: string[] }> {
+  const errors: string[] = []
+
+  const { data: jobs, error: selErr } = await supabase
+    .from(CONTENT_JOBS_TABLE)
+    .select('id')
+    .in('status', ['written', 'failed'])
+    .lt('created_at', cutoffIso)
+  if (selErr) {
+    errors.push(`${CONTENT_JOBS_TABLE} select: ${selErr.message}`)
+    return { deletedJobs: 0, deletedImages: 0, errors }
+  }
+  const jobIds = (jobs ?? []).map(j => j.id as string)
+  if (jobIds.length === 0) return { deletedJobs: 0, deletedImages: 0, errors }
+
+  // Storage first — an orphaned file costs space, an orphaned row does not.
+  let deletedImages = 0
+  for (const jobId of jobIds) {
+    try {
+      const { data: files } = await supabase.storage.from(IMAGE_BUCKET).list(`generated/${jobId}`, { limit: 1000 })
+      if (files && files.length > 0) {
+        const paths = files.map(f => `generated/${jobId}/${f.name}`)
+        const { error: rmErr } = await supabase.storage.from(IMAGE_BUCKET).remove(paths)
+        if (!rmErr) deletedImages += paths.length
+      }
+    } catch {
+      // best-effort — a storage hiccup never blocks the DB cleanup
+    }
+  }
+
+  const { count: imgCount, error: imgErr } = await supabase
+    .from(IMAGE_JOBS_TABLE)
+    .delete({ count: 'exact' })
+    .in('job_id', jobIds)
+  if (imgErr) errors.push(`${IMAGE_JOBS_TABLE}: ${imgErr.message}`)
+
+  const { count: jobCount, error: jobErr } = await supabase
+    .from(CONTENT_JOBS_TABLE)
+    .delete({ count: 'exact' })
+    .in('id', jobIds)
+  if (jobErr) errors.push(`${CONTENT_JOBS_TABLE}: ${jobErr.message}`)
+
+  return { deletedJobs: jobCount ?? 0, deletedImages, errors }
+}
+
 export interface CleanupResult {
   success: boolean
   deleted_ai: number
   deleted_investment: number
   deleted_job: number
   deleted_images: number
+  deleted_content_jobs: number
+  deleted_content_images: number
   errors: string[]
 }
 
@@ -90,6 +145,19 @@ export async function runCleanup(): Promise<CleanupResult> {
     // ignore — image cleanup is best-effort
   }
 
+  // Finished newsletter/article drafts get a longer, separate retention window.
+  let deletedContentJobs = 0
+  let deletedContentImages = 0
+  try {
+    const contentCutoff = contentRetentionCutoff(Date.now())
+    const result = await cleanupContentJobs(supabase, contentCutoff)
+    deletedContentJobs = result.deletedJobs
+    deletedContentImages = result.deletedImages
+    errors.push(...result.errors)
+  } catch (err) {
+    errors.push(`${CONTENT_JOBS_TABLE}: ${err instanceof Error ? err.message : 'unknown error'}`)
+  }
+
   // Only record success when every delete actually succeeded. Stamping
   // `last_cleaned` after a failed delete marks the job done while nothing was
   // removed, which silently suppresses retries until the next interval. Leaving
@@ -112,6 +180,8 @@ export async function runCleanup(): Promise<CleanupResult> {
     deleted_investment: invCount ?? 0,
     deleted_job: jobCount ?? 0,
     deleted_images: deletedImages,
+    deleted_content_jobs: deletedContentJobs,
+    deleted_content_images: deletedContentImages,
     errors,
   }
 }
