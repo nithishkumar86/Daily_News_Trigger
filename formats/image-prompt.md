@@ -63,10 +63,16 @@ Each column contains, top to bottom:
 - a large circled number in the column colour next to the story headline in bold capitals, white with its key words in the column colour
 - the company or product name as a clean white wordmark with a simple logo style icon
 - a small glowing illustration that shows the story (describe it: e.g. a project dashboard, a code editor with agent task cards ticked, a cloud data centre, a goal to context to tools to review workflow loop)
-- an icon in a circle plus the label "[LABEL A]" in the column colour, then its explanation in
-  large, bold, high contrast white text, big enough to read at a glance on a phone screen —
-  this is the column's only explanation, so give it the most visual weight after the headline
-- an icon in a circle plus the label "[LABEL B]" in the column colour and one or two lines of white text
+- an icon in a circle plus the label "[LABEL A]" in the column colour, then its explanation
+  broken into short line wrapped sentences (about 3 to 5 words per line, never one long
+  unbroken line), set in a bold, highly legible sans serif, solid white on the dark glass
+  panel with clear padding around it — this is the column's only explanation and the
+  single most important text in the whole image, so make it the largest body text in the
+  column, large enough to read at a glance on a phone screen held at arm's length, not
+  just readable when zoomed in on a desktop monitor
+- an icon in a circle plus the label "[LABEL B]" in the column colour and one or two short
+  line wrapped lines of white text, smaller than [LABEL A]'s text but still clearly legible
+  on a phone screen
 
 Column 1: headline "[HEADLINE 1]", wordmark "[COMPANY 1]", illustration: [ILLUSTRATION 1],
 [LABEL A]: "[TEXT 1A]", [LABEL B]: "[TEXT 1B]".
@@ -76,9 +82,12 @@ Bottom: a full width dark strip with five evenly spaced items separated by thin 
 each a coloured glowing icon plus short white text: "[SLOGAN 1]" | "[SLOGAN 2]" |
 "[SLOGAN 3]" | "[SLOGAN 4]" | "[SLOGAN 5]".
 
-Style: futuristic, clean, high contrast, neon glow, sharp typography, body text large
-enough to read on a phone, no tiny text, no spelling mistakes, all text in English,
-no watermark. Any people are stylised digital illustrations, never real or recognisable people.
+Style: futuristic, clean, high contrast, neon glow, sharp bold typography. Every piece of
+text, especially each column's "why it matters" / "what it means" explanation, must be
+large, bold and high contrast enough to read clearly both zoomed in on a desktop monitor
+and at a glance on a small phone screen: no thin decorative fonts, no tiny text, no text
+that only works at one size. No spelling mistakes, all text in English, no watermark. Any
+people are stylised digital illustrations, never real or recognisable people.
 ```
 
 Per section look (from the manager's reference images):
@@ -121,9 +130,16 @@ Rules for Layout A:
   Achieve more with AI."; insights: "AI is evolving fast. Skills last forever.", "Design
   better workflows", "Leverage the right tools", "Verify everything", "That's how real AI
   Dominators win.").
-- Keep every text snippet short, because image models garble long text: headline max 8
-  words, [LABEL A] max 30 words (it is the column's only explanation, so give it room to be
-  a complete, clear sentence), [LABEL B] max 25 words.
+- Keep every text snippet short, because image models garble long text and crowd small
+  phone screens: headline max 8 words, [LABEL A] max 22 words (it is the column's only
+  explanation and the image's most important text, so it must stay short enough to render
+  at large size and still be a complete, clear sentence), [LABEL B] max 16 words.
+- Mobile legibility is mandatory for every column, not optional polish: with up to 5
+  columns side by side, each column is narrow, so [LABEL A] and [LABEL B] text must be
+  described as bold, high contrast, short line wrapped text that stays sharp at a small
+  phone width, never a dense paragraph that only works zoomed in on a desktop screen. If a
+  sentence feels long, shorten it rather than letting the image model shrink the font to
+  fit.
 
 Style reference (columns built from the manager's real images; match their shape and
 length, never copy their facts):
@@ -148,12 +164,17 @@ deployment are strong career and business opportunities."
 
 ## Layout B — trending tool (trending)
 
-This is the only image with the five audience use cases. Write the prompt in this
-structure, filling every bracket:
+This is the only image with the five audience use cases. Keep this layout calm and
+uncluttered: a short info panel at the top, then one clean full width row per audience, no
+UI mockups, no tab bars, no tick lists, no multi step flow diagrams. Every section must
+stay readable both filling a desktop screen and shrunk to a phone width, so prefer fewer,
+larger elements over many small ones. Write the prompt in this structure, filling every
+bracket:
 
 ```
 A wide 16:9 landscape infographic (1536x1024), ultra detailed, crisp readable text,
-premium tech poster style. Deep navy to black background with subtle glowing circuit lines.
+premium tech poster style, calm and uncluttered with generous spacing, not crowded. Deep
+navy to black background with subtle glowing circuit lines.
 
 Top left: a glowing circular neon badge with a small rising arrow and the words
 "TRENDING NOW". Top center: huge bold headline "AI TRENDING TOOL" in white with "TOOL" in
@@ -161,44 +182,45 @@ a cyan to teal gradient, and below it "OF THE WEEK" in widely spaced white capit
 two thin glowing lines. Top right: a rounded neon bordered badge with a star icon and two
 lines: "[EDITION LABEL]" in white and "[EDITION DATES]" in teal.
 
-Left side (about 60 percent of the width), a large rounded glass panel:
-- top left: a large rounded app icon tile for the tool, next to the tool name "[TOOL NAME]"
-  as a huge two tone wordmark (first word white, second word teal), and under it a teal pill
-  with "[WITH MODEL]"
-- below: one line of large white text: "[DESCRIPTION, max 20 words]"
-- below: four feature rows, each a round neon icon, a teal title and one short white line:
-  "[FEATURE 1 TITLE]" "[FEATURE 1 LINE]", "[FEATURE 2 TITLE]" "[FEATURE 2 LINE]",
-  "[FEATURE 3 TITLE]" "[FEATURE 3 LINE]", "[FEATURE 4 TITLE]" "[FEATURE 4 LINE]"
-- right part of the panel: a large glowing UI mockup of the tool in action: a top tab bar
-  with four tabs ([TAB 1], [TAB 2], [TAB 3], [TAB 4]), a left sidebar, and a main area
-  showing [MOCKUP TASK], with a short checklist of steps (some ticked), a progress ring and
-  a glowing "[ACTION BUTTON]" button
+Below the header, one wide glass panel spanning the full width:
+- left side: a large rounded app icon tile for the tool, next to the tool name
+  "[TOOL NAME]" as a huge two tone wordmark (first word white, second word teal), and under
+  it a teal pill with "[WITH MODEL]"
+- center: one or two lines of large white text: "[DESCRIPTION, max 20 words]", and below it
+  three short feature tags in a single row, each a small pill with an icon and 2 or 3 words:
+  "[FEATURE 1]" "[FEATURE 2]" "[FEATURE 3]"
+- right side: the heading "WHY THIS TOOL IS TRENDING" in gold and one short line of white text,
+  "[TRENDING LINE]", max 16 words
 
-Under the left panel, a wide glass strip: a glowing neon brain on the left, the heading
-"WHY THIS TOOL IS TRENDING" in gold, the text "[TRENDING LINE 1]" and "[TRENDING LINE 2]"
-with the tool name in teal; then a three step flow with icons and arrows: "FROM" "[FROM]"
-then "TO" "[TO]" then "IMPACT" "[IMPACT]"; and on the right a gold bordered box with a
-trophy, the title "AI DOMINATORS TAKEAWAY" and three short lines: "[TAKEAWAY 1]"
-"[TAKEAWAY 2]" "[TAKEAWAY 3]".
+Next, a slim gold bordered strip across the full width: a trophy icon, the label
+"AI DOMINATORS TAKEAWAY" in gold, followed by one short white sentence, "[TAKEAWAY LINE]",
+max 18 words.
 
-Right side (about 40 percent of the width): the heading "BEST USE CASES" between two thin
-glowing arrows, then five stacked horizontal glass cards, each with a stylised illustrated
-person working at a laptop on the left, a round neon icon, a bold title in the card colour,
-the use case sentence in white, and on the right four short items with ticks in the card colour:
-1. purple card, graduation cap icon, "FOR STUDENTS": "[STUDENTS SENTENCE]", ticks: [4 ITEMS]
-2. blue card, rocket icon, "FOR FREELANCERS": "[FREELANCERS SENTENCE]", ticks: [4 ITEMS]
-3. green card, briefcase icon, "FOR WORKING PROFESSIONALS": "[PROFESSIONALS SENTENCE]", ticks: [4 ITEMS]
-4. orange card, rising bar chart icon, "FOR BUSINESS OWNERS": "[BUSINESS OWNERS SENTENCE]", ticks: [4 ITEMS]
-5. teal card, house icon, "FOR REAL ESTATE PROFESSIONALS": "[REAL ESTATE SENTENCE]", ticks: [4 ITEMS]
+Below that, the heading "BEST USE CASES" centered between two thin glowing lines, then
+exactly five full width horizontal rows stacked top to bottom, equal height, each clearly
+separated by a thin divider line so they read as a simple clean list, not cards. Every row
+has the same layout, left to right: a round neon icon in the row's colour, a short bold
+label in that colour ("FOR STUDENTS", "FOR FREELANCERS", "FOR WORKING PROFESSIONALS",
+"FOR BUSINESS OWNERS", "FOR REAL ESTATE PROFESSIONALS"), then one single line of bold
+white text with that audience's use case sentence filling the rest of the row. No side
+illustrations, no people, no tick lists, no extra icons in the rows, just the icon, the
+label and the one line sentence, so each row stays simple and reads instantly on a phone.
+1. purple icon, "FOR STUDENTS": "[STUDENTS SENTENCE]"
+2. blue icon, "FOR FREELANCERS": "[FREELANCERS SENTENCE]"
+3. green icon, "FOR WORKING PROFESSIONALS": "[PROFESSIONALS SENTENCE]"
+4. orange icon, "FOR BUSINESS OWNERS": "[BUSINESS OWNERS SENTENCE]"
+5. teal icon, "FOR REAL ESTATE PROFESSIONALS": "[REAL ESTATE SENTENCE]"
 
 Bottom: a full width dark strip with four items separated by thin lines, each a coloured
-glowing icon and two short white lines: "[SLOGAN 1]" | "[SLOGAN 2]" | "[SLOGAN 3]" |
+glowing icon and one short white line: "[SLOGAN 1]" | "[SLOGAN 2]" | "[SLOGAN 3]" |
 "[SLOGAN 4]", and on the far right a rounded neon bordered pill with "[CLOSING LINE]
 THAT'S HOW AI DOMINATORS WIN." with "AI DOMINATORS" in teal.
 
-Style: futuristic, clean, high contrast, neon glow, sharp typography, body text large
-enough to read on a phone, no tiny text, no spelling mistakes, all text in English,
-no watermark. People are stylised digital illustrations, never real or recognisable people.
+Style: futuristic, clean, minimal, high contrast, neon glow, sharp bold typography, calm
+and uncluttered with clear breathing room between sections, body text large enough to
+read clearly both on a desktop screen and at a glance on a phone screen, no tiny text, no
+spelling mistakes, all text in English, no watermark. No decorative illustrations beyond
+the icons named above, no people.
 ```
 
 What goes where (everything comes from the trending tool section you wrote):
@@ -206,27 +228,25 @@ What goes where (everything comes from the trending tool section you wrote):
   gives "ChatGPT Work" and "WITH GPT-5.6". No model in the heading: leave the pill out.
 - [DESCRIPTION]: one sentence from the paragraph on what the tool is, shortened to 20
   words or fewer without adding facts.
-- Four features: real capabilities named in that section (2 or 3 word title, line max 10
-  words). Fewer than four in the section: use fewer rows. Never invent a feature.
-- [TRENDING LINE 1]: the first paragraph under Why This Tool Is Trending, word for word.
-  [TRENDING LINE 2]: the first sentence of the second paragraph, word for word.
-  FROM / TO / IMPACT: the shift that paragraph describes, 2 or 3 words each (e.g. "One
-  Prompt", "Complete Outcomes", "More clarity. Better results.").
-- Takeaway box: three lines of 2 or 3 words that sum up the AI Dominators Takeaway (e.g.
-  "Master workflows." "Deliver real outcomes." "Stay ahead.").
+- Three feature tags: real capabilities named in that section (2 or 3 words each). Fewer
+  than three in the section: use fewer tags. Never invent a feature.
+- [TRENDING LINE]: the clearest single sentence from the Why This Tool Is Trending
+  paragraphs, shortened to 16 words or fewer without adding facts.
+- [TAKEAWAY LINE]: one sentence, 18 words or fewer, that sums up the AI Dominators
+  Takeaway for this tool.
 - The five use case sentences: copy each "For ..." line from Best Use Cases word for word,
-  all five, never shortened. The four ticks on each card are the tasks named in that same
-  sentence, 1 to 3 words each (e.g. "Study plans", "Revision guides", "Practice questions").
+  all five, never shortened and never split into separate items, so each stays one single
+  line in its row.
 - [EDITION DATES]: the earliest and newest item Date in the job, written like "28 APR TO 14
   JUL 2026" (one date if they are the same day). [EDITION LABEL]: "CATCH-UP EDITION" when the
   dates span more than 10 days, otherwise "THIS WEEK'S EDITION".
-- [MOCKUP TASK] and the tabs: a realistic task from the use cases, e.g. a marketing campaign
-  plan with steps Research market, Analyse competitors, Create campaign strategy.
-- Slogans (two short lines each) and [CLOSING LINE] (two short imperatives, e.g. "BUILD
+- Slogans (one short line each) and [CLOSING LINE] (two short imperatives, e.g. "BUILD
   WORKFLOWS. DELIVER OUTCOMES.") are written fresh and follow the newsletter writing rules:
   no emojis, no hyphens or dashes, no asterisks.
 - Keep every snippet short so the image model can render it: use case sentences as written,
-  everything else max 12 words.
+  everything else max 12 words. Never add an element not named in the structure above (no
+  UI mockup, no tabs, no checklist, no progress ring, no tick lists, no FROM/TO/IMPACT
+  flow) — the layout must stay simple and professional, not packed with extra visuals.
 
 ---
 

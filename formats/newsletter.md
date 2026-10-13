@@ -132,8 +132,66 @@ For business owners: <a full sentence of concrete things this tool does for busi
 For real estate professionals: <a full sentence of concrete things this tool does for real estate professionals.>
 
 All five audience lines are required and each must be a complete sentence naming real
-tasks (for example "Turn notes and reference files into study plans, revision guides and
-practice questions."). Never leave one empty, never cut one short, never skip one.
+tasks. Never leave one empty, never cut one short, never skip one.
+
+How to write a GOOD use case line (do this for all five, not just the example):
+- Name 3 or 4 concrete tasks that this specific tool's actual features make possible, not
+  generic claims like "helps you work faster" or "saves time on tasks". Ground every task
+  in what the item says the tool can actually do (its features, inputs, outputs, modes).
+- Use strong action verbs (turn, draft, analyse, track, summarise, generate, compare,
+  rehearse, automate) followed by a real deliverable (a plan, a proposal, a report, a
+  listing, a script), not vague nouns like "things" or "work".
+- Fit the task to how that audience actually spends their day. Think about what each
+  audience produces, is measured on, and repeats often:
+  Students: exam prep, assignments, research summarising, revision, skill practice.
+  Freelancers: pitching clients, proposals, scope and pricing, portfolio pieces, juggling
+    several projects at once.
+  Working professionals: reports, meeting prep, presentations, cross tool workflows,
+    performance reviews.
+  Business owners: hiring and onboarding, marketing, operations, cash flow and pricing
+    decisions, customer communication.
+  Real estate professionals: listings, buyer and seller communication, market and
+    neighbourhood research, scheduling viewings, contracts and follow ups.
+- Vary the verbs and structure across the five lines so they do not all read the same way.
+- Each line should sound like something a person in that role would actually say they use
+  it for, not a marketing bullet. If a task could not be said out loud at work without
+  sounding fake, rewrite it.
+
+NEVER force the audience's job objects onto a tool that has nothing to do with them. Do
+the fit check below before writing each line:
+1. Ask: does this audience's core job actually touch what the tool does (its real
+   category, e.g. visual try on, writing, data analysis, coding)? If yes, write the
+   direct, obvious use case for their job.
+2. If the honest answer is "barely" or "not really", do not invent a scene that bolts
+   their job props onto the tool (a property, a client meeting room, a classroom) just to
+   sound relevant. Instead find the one real, narrow reason a person in that role would
+   personally open this tool: often it is about their own appearance, image or shopping
+   for themselves, their content for social media, or a genuinely adjacent business use
+   (reselling, cataloguing, client gifting), never a scenario where the tool's category
+   has nothing to do with the action described.
+3. If even the narrow honest reason is weak, write a shorter, plainer line rather than a
+   padded, far fetched one. A short true sentence beats a long invented one.
+
+Bad example, and why: a virtual try on and visual shopping tool produced "For real estate
+professionals: Preview outfits for client meetings and property viewings, then save the
+chosen pieces in Favorites." This is forced: property viewings have nothing to do with
+trying on clothes. A better, honestly scoped line for the same tool: "For real estate
+professionals: Try on and save a few polished outfits to wear for client meetings and
+listing photos, without a physical fitting room." The task is still narrow and real
+(their own appearance for client facing work), it just does not pretend the tool touches
+properties or listings themselves.
+
+Example of the quality bar (for a different tool, do not reuse this tool name or facts):
+For students: Turn lecture notes and reading material into structured study guides,
+practice quizzes and short summaries before an exam.
+For freelancers: Draft client proposals, estimate project scope and pricing, and turn
+scattered notes into a polished portfolio piece.
+For working professionals: Pull the key points out of long reports, prepare talking points
+for a meeting, and turn raw notes into a clean presentation.
+For business owners: Draft job postings and onboarding guides, plan a month of marketing
+content, and turn sales numbers into a plain language summary for the team.
+For real estate professionals: Research a neighbourhood's schools, prices and amenities,
+draft listing descriptions, and write follow up messages after a viewing.
 
 AI Dominators Takeaway
 <Paragraph 1: one line of advice about the bigger idea.>
