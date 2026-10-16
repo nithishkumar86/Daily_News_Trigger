@@ -1,4 +1,4 @@
-import { retentionCutoff, RETENTION_DAYS } from '@/lib/retention'
+import { istDate, retentionCutoff, RETENTION_DAYS } from '@/lib/retention'
 
 // Calendar date N days before `nowMs`, built independently of retentionCutoff
 // (via setUTCDate) so the boundary assertions are not tautological.
@@ -36,5 +36,24 @@ describe('retentionCutoff', () => {
   it('error case: throws a RangeError for a non-finite timestamp', () => {
     expect(() => retentionCutoff(NaN)).toThrow(RangeError)
     expect(() => retentionCutoff(Infinity)).toThrow(/finite timestamp/)
+  })
+})
+
+describe('istDate', () => {
+  it('returns the India calendar date as YYYY-MM-DD', () => {
+    expect(istDate(Date.parse('2026-10-16T10:00:00Z'))).toBe('2026-10-16')
+  })
+
+  it('rolls over at 18:30 UTC (IST midnight)', () => {
+    expect(istDate(Date.parse('2026-10-16T18:29:59Z'))).toBe('2026-10-16')
+    expect(istDate(Date.parse('2026-10-16T18:30:00Z'))).toBe('2026-10-17')
+  })
+
+  it('handles month and year boundaries', () => {
+    expect(istDate(Date.parse('2026-12-31T19:00:00Z'))).toBe('2027-01-01')
+  })
+
+  it('throws on a non-finite timestamp', () => {
+    expect(() => istDate(NaN)).toThrow(RangeError)
   })
 })

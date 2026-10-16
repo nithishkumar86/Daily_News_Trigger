@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, IMAGE_BUCKET } from '@/lib/supabase'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { istDate } from '@/lib/retention'
 
 const SERVER_INFO = {
   name: 'daily-news-trigger',
@@ -24,7 +25,7 @@ const TOOLS = [
   {
     name: 'send_news',
     description:
-      'Send a single news item to the Daily News Trigger database. Call this once per news item, in rank order (1 through 10). Topic automatically routes to the correct table: trending/ai/tools/models → ai_news, startup/investment/funding/company → investment_news, hiring/layoffs/jobs/hr → job_hire_fire.',
+      'Send a single news item to the Daily News Trigger database. Call this once per news item, in rank order (1 through 10). Topic automatically routes to the correct table: trending/ai/tools/models → ai_news, startup/investment/funding/company → investment_news, hiring/layoffs/jobs/hr → job_hire_fire. Every call returns a receipt: count an item as sent ONLY when saved is true and record_id is set. code "slot_taken" means that rank already holds a different story (nothing was overwritten) — resend with a rank from free_ranks. code "duplicate" means the story is already saved — skip it.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -54,18 +55,19 @@ const TOOLS = [
         },
         Date: {
           type: 'string',
-          description: 'Date of the news item in YYYY-MM-DD format',
+          description:
+            "Optional, informational only: the source article's publish date (YYYY-MM-DD). The server files every item under today's date in India (IST), returned as date in the receipt, so one run always appears together.",
         },
       },
-      required: ['Rank', 'Topic', 'Title', 'Summary', 'Image', 'Link', 'Date'],
+      required: ['Rank', 'Topic', 'Title', 'Summary', 'Image', 'Link'],
     },
   },
 ]
 
 function validateArgs(args: Record<string, string>): string | null {
-  const { Rank, Topic, Title, Summary, Image, Link, Date: DateVal } = args
-  if (!Rank || !Topic || !Title || !Summary || !Image || !Link || !DateVal)
-    return 'Missing required fields: Rank, Topic, Title, Summary, Image, Link, Date'
+  const { Rank, Topic, Title, Summary, Image, Link } = args
+  if (!Rank || !Topic || !Title || !Summary || !Image || !Link)
+    return 'Missing required fields: Rank, Topic, Title, Summary, Image, Link'
   const rankNum = parseInt(Rank)
   if (isNaN(rankNum) || rankNum < 1 || rankNum > 10) return 'Rank must be a number between 1 and 10'
   if (!resolveTable(Topic)) return `Topic "${Topic}" is invalid. Must be one of: ${ALL_VALID_TOPICS.join(', ')}`
@@ -73,7 +75,6 @@ function validateArgs(args: Record<string, string>): string | null {
   if (titleWordCount >= 20) return `Title must be under 20 words (current: ${titleWordCount} words)`
   if (Summary.length < 500) return `Summary must be at least 500 characters (current: ${Summary.length})`
   if (!/^https?:\/\//i.test(Link)) return 'Link must start with http:// or https://'
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(DateVal)) return 'Date must be in YYYY-MM-DD format'
   return null
 }
 
@@ -112,58 +113,129 @@ async function resolveImage(
   }
 }
 
+// Every send_news result is an explicit receipt: the agent may only count an
+// item as sent when saved === true and record_id is present. The same object
+// goes in the text block (what 2024-11-05 clients read) and structuredContent.
+type FailCode = 'validation' | 'config' | 'db_error' | 'slot_taken' | 'duplicate'
+
+function receipt(body: Record<string, unknown>, isError = false) {
+  return {
+    content: [{ type: 'text', text: JSON.stringify(body) }],
+    structuredContent: body,
+    ...(isError ? { isError: true } : {}),
+  }
+}
+
+function fail(code: FailCode, error: string, extra: Record<string, unknown> = {}) {
+  return receipt({ success: false, saved: false, record_id: null, code, error, ...extra }, true)
+}
+
+// Light normalization so a retry with a trailing slash or #fragment still
+// counts as the same story.
+function normalizeLink(link: string): string {
+  return link.trim().replace(/#.*$/, '').replace(/\/+$/, '').toLowerCase()
+}
+
+function linkVariants(link: string): string[] {
+  const base = link.trim().replace(/#.*$/, '').replace(/\/+$/, '')
+  return [...new Set([link, link.trim(), base, `${base}/`])]
+}
+
+async function slotTaken(supabase: SupabaseClient, table: string, date: string, rank: string) {
+  const { data } = await supabase.from(table).select('Rank').eq('Date', date)
+  const taken = new Set((data ?? []).map(r => Number(r.Rank)))
+  const free_ranks = Array.from({ length: 10 }, (_, i) => i + 1).filter(r => !taken.has(r))
+  const next = free_ranks.length
+    ? `Resend this story with one of the free ranks: ${free_ranks.join(', ')}.`
+    : `All ranks 1-10 for ${date} are full; this story cannot be added today.`
+  return fail(
+    'slot_taken',
+    `Rank ${rank} on ${date} in ${table} already holds a different story; it was NOT overwritten. ${next}`,
+    { date, rank, free_ranks }
+  )
+}
+
 async function handleToolCall(name: string, args: Record<string, string>) {
   if (name !== 'send_news') {
     return { error: { code: -32601, message: `Unknown tool: ${name}` } }
   }
 
   const validationError = validateArgs(args)
-  if (validationError) {
-    return {
-      content: [{ type: 'text', text: JSON.stringify({ success: false, error: validationError }) }],
-      isError: true,
-    }
-  }
+  if (validationError) return fail('validation', validationError)
 
-  const { Rank, Topic, Title, Summary, Image, Link, Date: DateVal } = args
+  const { Rank, Topic, Title, Summary, Image, Link, Date: articleDate } = args
   const table = resolveTable(Topic)!
+  // The agent's Date is the article's publish date; storing it scattered one
+  // run across past date groups (and collided with older ranks). Every item is
+  // filed under the IST day it arrives instead.
+  const DateVal = istDate(Date.now())
 
   let supabase
   try {
     supabase = getServerSupabase()
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Supabase config error'
-    return {
-      content: [{ type: 'text', text: JSON.stringify({ success: false, error: msg }) }],
-      isError: true,
-    }
+    return fail('config', err instanceof Error ? err.message : 'Supabase config error')
+  }
+
+  // Conflict checks run BEFORE the image upload: the image path is keyed by
+  // date+rank, so uploading first would clobber the existing story's image
+  // even when the send is then rejected.
+  const key = normalizeLink(Link)
+
+  const { data: sameLink, error: linkErr } = await supabase
+    .from(table)
+    .select('id, Date, Rank, Link')
+    .in('Link', linkVariants(Link))
+  if (linkErr) return fail('db_error', linkErr.message)
+
+  const { data: slot, error: slotErr } = await supabase
+    .from(table)
+    .select('id, Link')
+    .eq('Date', DateVal)
+    .eq('Rank', Rank)
+    .maybeSingle()
+  if (slotErr) return fail('db_error', slotErr.message)
+
+  // The same story re-sent to its own slot is a retry → update in place.
+  // A different story never replaces an existing one.
+  const isRetry = !!slot && normalizeLink(String(slot.Link)) === key
+  if (slot && !isRetry) {
+    return slotTaken(supabase, table, DateVal, Rank)
+  }
+  const elsewhere = (sameLink ?? []).find(r => r.id !== slot?.id)
+  if (!isRetry && elsewhere) {
+    return fail(
+      'duplicate',
+      `This story is already saved in ${table} on ${elsewhere.Date} at rank ${elsewhere.Rank} (record_id ${elsewhere.id}). Skip it and send a different story.`,
+      { existing: { record_id: elsewhere.id, date: elsewhere.Date, rank: elsewhere.Rank } }
+    )
   }
 
   // Download the temp image URL and store the permanent Storage URL instead.
   const resolvedImage = await resolveImage(supabase, table, DateVal, Rank, Image)
+  const row = { Rank, Topic: Topic.toLowerCase().trim(), Title, Summary, Image: resolvedImage, Link, Date: DateVal }
 
-  // Upsert, not insert: ("Date","Rank") is unique per table, so a re-run or a
-  // retried send on the same day would otherwise fail with a duplicate key and
-  // lose the item. Conflicting rows are replaced, making ingest idempotent.
-  const { data, error } = await supabase
-    .from(table)
-    .upsert(
-      { Rank, Topic: Topic.toLowerCase().trim(), Title, Summary, Image: resolvedImage, Link, Date: DateVal },
-      { onConflict: 'Date,Rank' }
-    )
-    .select()
-    .single()
+  // Empty slot → plain insert, so a concurrent send that took the slot first
+  // hits the ("Date","Rank") unique index (23505) instead of being overwritten.
+  const { data, error } = isRetry
+    ? await supabase.from(table).update(row).eq('id', slot!.id).select().single()
+    : await supabase.from(table).insert(row).select().single()
 
-  if (error) {
-    return {
-      content: [{ type: 'text', text: JSON.stringify({ success: false, error: error.message }) }],
-      isError: true,
-    }
-  }
+  if (error?.code === '23505') return slotTaken(supabase, table, DateVal, Rank)
+  if (error || !data) return fail('db_error', error?.message ?? 'Database returned no row')
 
-  return {
-    content: [{ type: 'text', text: JSON.stringify({ success: true, table, data }) }],
-  }
+  return receipt({
+    success: true,
+    saved: true,
+    record_id: data.id,
+    action: isRetry ? 'updated' : 'inserted',
+    table,
+    date: data.Date,
+    article_date: articleDate ?? null,
+    rank: data.Rank,
+    title: data.Title,
+    data: { id: data.id, Date: data.Date, Rank: data.Rank, Title: data.Title, Link: data.Link },
+  })
 }
 
 export async function POST(req: NextRequest) {

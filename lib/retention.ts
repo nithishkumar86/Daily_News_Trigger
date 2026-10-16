@@ -28,3 +28,20 @@ export function contentRetentionCutoff(nowMs: number): string {
   }
   return new Date(nowMs - CONTENT_RETENTION_DAYS * MS_PER_DAY).toISOString()
 }
+
+const istFmt = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Kolkata',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
+// Calendar date (YYYY-MM-DD) in India at the given instant. send_news files
+// every item under the IST day it arrives, so one daily run lands as one date
+// group no matter how old each source article is.
+export function istDate(nowMs: number): string {
+  if (!Number.isFinite(nowMs)) {
+    throw new RangeError('istDate: nowMs must be a finite timestamp')
+  }
+  return istFmt.format(new Date(nowMs))
+}
