@@ -141,9 +141,17 @@ function linkVariants(link: string): string[] {
   return [...new Set([link, link.trim(), base, `${base}/`])]
 }
 
-async function slotTaken(supabase: SupabaseClient, table: string, date: string, rank: string) {
-  const { data } = await supabase.from(table).select('Rank').eq('Date', date)
-  const taken = new Set((data ?? []).map(r => Number(r.Rank)))
+// dayRows: the date's rows if already fetched; otherwise (the insert-race path)
+// they are re-read so free_ranks reflects the row that just won the slot.
+async function slotTaken(
+  supabase: SupabaseClient,
+  table: string,
+  date: string,
+  rank: string,
+  dayRows?: Array<{ Rank: unknown }>
+) {
+  const rows = dayRows ?? (await supabase.from(table).select('Rank').eq('Date', date)).data ?? []
+  const taken = new Set(rows.map(r => Number(r.Rank)))
   const free_ranks = Array.from({ length: 10 }, (_, i) => i + 1).filter(r => !taken.has(r))
   const next = free_ranks.length
     ? `Resend this story with one of the free ranks: ${free_ranks.join(', ')}.`
@@ -182,27 +190,26 @@ async function handleToolCall(name: string, args: Record<string, string>) {
   // even when the send is then rejected.
   const key = normalizeLink(Link)
 
-  const { data: sameLink, error: linkErr } = await supabase
-    .from(table)
-    .select('id, Date, Rank, Link')
-    .in('Link', linkVariants(Link))
-  if (linkErr) return fail('db_error', linkErr.message)
-
-  const { data: slot, error: slotErr } = await supabase
-    .from(table)
-    .select('id, Link')
-    .eq('Date', DateVal)
-    .eq('Rank', Rank)
-    .maybeSingle()
-  if (slotErr) return fail('db_error', slotErr.message)
+  // Both lookups in parallel: the function region is far from the database,
+  // so every sequential round trip costs hundreds of ms. The day's rows give
+  // both the target slot and free_ranks for a rejection.
+  const [linkRes, dayRes] = await Promise.all([
+    supabase.from(table).select('id, Date, Rank, Link').in('Link', linkVariants(Link)),
+    supabase.from(table).select('id, Rank, Link').eq('Date', DateVal),
+  ])
+  if (linkRes.error) return fail('db_error', linkRes.error.message)
+  if (dayRes.error) return fail('db_error', dayRes.error.message)
+  const sameLink = linkRes.data ?? []
+  const dayRows = dayRes.data ?? []
+  const slot = dayRows.find(r => Number(r.Rank) === Number(Rank))
 
   // The same story re-sent to its own slot is a retry → update in place.
   // A different story never replaces an existing one.
   const isRetry = !!slot && normalizeLink(String(slot.Link)) === key
   if (slot && !isRetry) {
-    return slotTaken(supabase, table, DateVal, Rank)
+    return slotTaken(supabase, table, DateVal, Rank, dayRows)
   }
-  const elsewhere = (sameLink ?? []).find(r => r.id !== slot?.id)
+  const elsewhere = sameLink.find(r => r.id !== slot?.id)
   if (!isRetry && elsewhere) {
     return fail(
       'duplicate',
