@@ -34,6 +34,85 @@ export function groupByDate<T extends NewsItem>(rows: T[]): { date: string; item
   return groups
 }
 
+// Lowercase and drop everything but letters/digits, so "Chat GPT", "chat-gpt" and "ChatGPT" compare equal
+const compact = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '')
+
+// Brand searches ("claude", "chat gpt", "Gemini", or a maker like "anthropic") are STRICT and look at the
+// HEADLINE: it must name that brand and no rival lab (the summary only matters for China, see CHINA_PLACES). Summaries name rival models in passing
+// ("…unlike Claude…"), and two-lab headlines ("OpenAI and Anthropic…") belong to neither filter.
+// Aliases are whole words ("nano banana" = consecutive words); a trailing * is a prefix ("gpt*" → GPT-4o).
+// Plain "google" is deliberately not a Gemini alias: most Google stories aren't about Gemini.
+// "moonshot" is the CHINESE AI bucket (see CHINESE_AI); its aliases here are only what can be typed to open it.
+export const BRAND_ALIASES: Record<string, string[]> = {
+  claude: ['claude', 'anthropic'],
+  chatgpt: ['chatgpt', 'openai', 'open ai', 'gpt*'],
+  gemini: ['gemini', 'nano banana'],
+  meta: ['meta', 'llama*'],
+  nvidia: ['nvidia', 'nemotron'],
+  moonshot: ['moonshot', 'china', 'chinese'],
+}
+
+// Any Chinese model, lab or China-wide headline goes to Moonshot — even one that also names Claude or
+// NVIDIA ("Chinese labs distilled Claude") — and never to any other brand.
+const CHINESE_AI = [
+  'moonshot', 'kimi', 'china', 'chinese', 'deepseek', 'qwen', 'alibaba', 'baidu', 'ernie',
+  'minimax', 'zhipu', 'glm*', 'bytedance', 'doubao', 'tencent', 'hunyuan',
+]
+// A US-brand headline whose SUMMARY is about China ("…diverted Nvidia AI servers to China…") is China
+// news too → Moonshot only. Places, not lab names: a summary that just lists a Chinese model among
+// test subjects ("…GLM and others…") doesn't make an Anthropic research story Chinese.
+const CHINA_PLACES = ['china', 'chinese', 'beijing']
+// Non-Chinese labs with no filter of their own — naming one makes a headline "not only <brand>"
+const OTHER_LABS = ['grok', 'xai', 'mistral']
+
+const US_BRAND_ALIASES = Object.entries(BRAND_ALIASES).filter(([b]) => b !== 'moonshot').flatMap(([, a]) => a)
+
+const titleWords = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean)
+
+function hasAlias(words: string[], alias: string): boolean {
+  const prefix = alias.endsWith('*')
+  const parts = titleWords(alias)
+  return words.some((_, i) =>
+    parts.every((p, j) => {
+      const w = words[i + j]
+      return w !== undefined && (prefix && j === parts.length - 1 ? w.startsWith(p) : w === p)
+    })
+  )
+}
+
+function brandFor(query: string): string | null {
+  const q = compact(query)
+  if (!q) return null
+  return Object.keys(BRAND_ALIASES).find(b => BRAND_ALIASES[b].some(a => compact(a) === q)) ?? null
+}
+
+function matchesBrand(title: string, summary: string, brand: string): boolean {
+  const words = titleWords(title)
+  const summaryWords = titleWords(summary)
+  const chinese =
+    CHINESE_AI.some(a => hasAlias(words, a)) ||
+    (US_BRAND_ALIASES.some(a => hasAlias(words, a)) && CHINA_PLACES.some(a => hasAlias(summaryWords, a)))
+  if (brand === 'moonshot') return chinese
+  if (chinese || !BRAND_ALIASES[brand].some(a => hasAlias(words, a))) return false
+  const rivals = [
+    ...Object.entries(BRAND_ALIASES).filter(([b]) => b !== brand && b !== 'moonshot').flatMap(([, aliases]) => aliases),
+    ...OTHER_LABS,
+  ]
+  return !rivals.some(a => hasAlias(words, a))
+}
+
+// Topic-tab search. A brand name → strict headline-only brand match (above). Anything else → every
+// whitespace-separated term must appear in the Title, Summary or Topic. Plain string checks —
+// no regex is ever built from the user's text. Empty query matches all.
+export function matchesQuery(item: Pick<NewsItem, 'Title' | 'Summary' | 'Topic'>, query: string): boolean {
+  const brand = brandFor(query)
+  if (brand) return matchesBrand(item.Title ?? '', item.Summary ?? '', brand)
+  const terms = query.split(/\s+/).map(compact).filter(Boolean)
+  if (terms.length === 0) return true
+  const haystack = compact(`${item.Title ?? ''} ${item.Summary ?? ''} ${item.Topic ?? ''}`)
+  return terms.every(t => haystack.includes(t))
+}
+
 const dateFmt = new Intl.DateTimeFormat('en-IN', {
   timeZone: 'UTC',
   weekday: 'short',

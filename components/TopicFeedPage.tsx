@@ -1,8 +1,9 @@
 'use client'
 import { useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
+import { Search, X } from 'lucide-react'
 import { TableName } from '@/lib/types'
-import { groupByDate } from '@/lib/newsFeed'
+import { groupByDate, matchesQuery } from '@/lib/newsFeed'
 import { useNewsFeed } from '@/lib/useNewsFeed'
 import { useSelection } from '@/lib/useSelection'
 import { useContentGeneration } from '@/lib/useContentGeneration'
@@ -25,27 +26,34 @@ interface TopicFeedPageProps {
   emptyIcon: string
   emptyLabel: string
   countNoun: [singular: string, plural: string]
+  // Quick-search chips shown under the search box (e.g. Claude / ChatGPT / Gemini on AI)
+  searchSuggestions?: string[]
 }
 
-// News feed for one table (AI / Invest / Jobs): all stored days newest first,
-// topic filter pills, and LinkedIn post generation only.
+// News feed for one table (AI / Invest / Jobs / Real Estate): all stored days newest first,
+// a search box + topic filter pills (both scoped to this table), and LinkedIn post generation only.
 export default function TopicFeedPage({
-  table, channel, fixedTopics, accent, title, subtitle, emptyIcon, emptyLabel, countNoun,
+  table, channel, fixedTopics, accent, title, subtitle, emptyIcon, emptyLabel, countNoun, searchSuggestions,
 }: TopicFeedPageProps) {
   const tables = useMemo(() => [table], [table])
   const { items, loading, error } = useNewsFeed({ tables, channel })
   const selection = useSelection(items, MAX_ITEMS)
   const gen = useContentGeneration()
   const [activeTab, setActiveTab] = useState('all')
+  const [query, setQuery] = useState('')
+  const searching = query.trim() !== ''
 
   const topics = useMemo(() => {
     const dbTopics = Array.from(new Set(items.map(i => (i.Topic ?? '').trim().toLowerCase().slice(0, 50))))
     return [...fixedTopics, ...dbTopics.filter(t => t && !fixedTopics.includes(t))]
   }, [items, fixedTopics])
 
+  // Search and topic pill combine (AND); order is kept so groupByDate stays newest-first
   const filtered = useMemo(
-    () => (activeTab === 'all' ? items : items.filter(i => i.Topic.trim().toLowerCase() === activeTab)),
-    [items, activeTab]
+    () => items.filter(i =>
+      (activeTab === 'all' || (i.Topic ?? '').trim().toLowerCase() === activeTab) && matchesQuery(i, query)
+    ),
+    [items, activeTab, query]
   )
   const groups = useMemo(() => groupByDate(filtered), [filtered])
   const latestDate = items[0]?.Date ?? ''
@@ -77,6 +85,54 @@ export default function TopicFeedPage({
 
         {hasItems && (
           <>
+            <div className="mb-4 max-w-xl">
+              <div className="relative">
+                <Search size={18} aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-[--text-muted] pointer-events-none" />
+                <input
+                  type="search"
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Escape') setQuery('') }}
+                  placeholder={`Search ${emptyLabel}…`}
+                  aria-label={`Search ${emptyLabel}`}
+                  maxLength={100}
+                  className="w-full min-h-[44px] pl-11 pr-11 rounded-full bg-[--bg-elevated] border border-[--border-subtle] text-base text-[--text-primary] placeholder:text-[--text-muted] focus:outline-none focus:ring-2 [&::-webkit-search-cancel-button]:hidden"
+                  style={{ '--tw-ring-color': accent } as React.CSSProperties}
+                  data-testid="news-search"
+                />
+                {searching && (
+                  <button
+                    type="button"
+                    onClick={() => setQuery('')}
+                    aria-label="Clear search"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full text-[--text-muted] hover:text-[--text-primary]"
+                  >
+                    <X size={18} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+              {searchSuggestions && searchSuggestions.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {searchSuggestions.map(s => {
+                    const active = query.trim().toLowerCase() === s.toLowerCase()
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setQuery(active ? '' : s)}
+                        aria-pressed={active}
+                        className={`min-h-[36px] px-4 rounded-full text-sm font-medium border transition-colors ${
+                          active ? 'text-white border-transparent' : 'border-[--border-subtle] text-[--text-muted] hover:text-[--text-primary]'
+                        }`}
+                        style={active ? { backgroundColor: accent } : undefined}
+                      >
+                        {s}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
             {/* Mobile: horizontally scrollable pills */}
             <div className="lg:hidden -mx-4 px-4 mb-6 overflow-x-auto pb-2 scrollbar-none">
               <div className="flex gap-2 w-max">
@@ -118,7 +174,22 @@ export default function TopicFeedPage({
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 sm:py-28 text-[--text-muted] text-center px-4">
             <div className="text-5xl sm:text-6xl mb-4" aria-hidden="true">{emptyIcon}</div>
-            {activeTab !== 'all' ? (
+            {searching ? (
+              <>
+                <p className="text-base sm:text-lg font-medium">
+                  No results for <span className="text-[--text-primary]">“{query.trim()}”</span>
+                  {activeTab !== 'all' && <> in <span className="text-[--text-primary] capitalize">{activeTab}</span></>}.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setQuery('')}
+                  className="mt-4 min-h-[44px] px-5 rounded-full text-sm font-medium text-white"
+                  style={{ backgroundColor: accent }}
+                >
+                  Clear search
+                </button>
+              </>
+            ) : activeTab !== 'all' ? (
               <>
                 <p className="text-base sm:text-lg font-medium">
                   No <span className="text-[--text-primary] capitalize">{activeTab}</span> news yet.
