@@ -90,18 +90,49 @@ const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0
 const JPG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 16])
 const HTML = Buffer.from('<html><body>AccessDenied: link expired</body></html>')
 
-function mockImageResponse(body: Buffer, opts: { status?: number; type?: string; length?: string } = {}) {
+// Streams the body in chunks like a real fetch Response; stats.pulled counts
+// chunks the route actually read, stats.cancelled records an early stop.
+function mockImageResponse(
+  body: Buffer,
+  opts: { status?: number; type?: string; length?: string | null; location?: string; chunk?: number; chunks?: number } = {}
+) {
   const status = opts.status ?? 200
+  const stats = { pulled: 0, cancelled: false }
+  const chunkSize = opts.chunk ?? Math.max(body.length, 1)
+  let offset = 0
+  const stream = new ReadableStream<Uint8Array>({
+    pull(ctrl) {
+      // opts.chunks: an endless body of repeated chunks (no Content-Length)
+      if (opts.chunks !== undefined) {
+        if (stats.pulled >= opts.chunks) return ctrl.close()
+        stats.pulled++
+        return ctrl.enqueue(new Uint8Array(chunkSize))
+      }
+      if (offset >= body.length) return ctrl.close()
+      stats.pulled++
+      ctrl.enqueue(new Uint8Array(body.subarray(offset, offset + chunkSize)))
+      offset += chunkSize
+    },
+    cancel() {
+      stats.cancelled = true
+    },
+  })
+  const headers: Record<string, string | null> = {
+    'content-type': opts.type ?? 'image/png',
+    'content-length': opts.length === undefined ? String(body.length) : opts.length,
+    location: opts.location ?? null,
+  }
   return {
     ok: status >= 200 && status < 300,
     status,
-    headers: {
-      get: (h: string) =>
-        h.toLowerCase() === 'content-type' ? opts.type ?? 'image/png' : h.toLowerCase() === 'content-length' ? opts.length ?? String(body.length) : null,
-    },
-    arrayBuffer: async () => body.buffer.slice(body.byteOffset, body.byteOffset + body.length),
+    headers: { get: (h: string) => headers[h.toLowerCase()] ?? null },
+    body: stream,
+    stats,
   }
 }
+
+const dnsLookup = jest.fn()
+jest.mock('dns/promises', () => ({ lookup: (...a: unknown[]) => dnsLookup(...a) }))
 
 jest.mock('@/lib/supabase', () => ({
   getServerSupabase: () => fakeClient,
@@ -143,6 +174,10 @@ beforeEach(() => {
   uploadError = null
   nextId = 1
   global.fetch = jest.fn(async () => mockImageResponse(PNG)) as unknown as typeof fetch
+  dnsLookup.mockReset()
+  dnsLookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }])
+  jest.spyOn(console, 'warn').mockImplementation(() => {})
+  jest.spyOn(console, 'error').mockImplementation(() => {})
 })
 
 afterEach(() => jest.restoreAllMocks())
@@ -318,31 +353,45 @@ describe('send_news only reports success when the story AND its image are saved'
     expect((await send(args())).receipt.image_url).toMatch(/\.jpg$/)
   })
 
-  const failures: Array<[string, () => unknown, RegExp]> = [
-    ['an expired link (HTTP 403)', () => mockImageResponse(HTML, { status: 403, type: 'application/xml' }), /HTTP 403/],
-    ['an expired link that answers 200 with an HTML page', () => mockImageResponse(HTML, { type: 'text/html' }), /did not return an image/],
-    ['an empty file', () => mockImageResponse(Buffer.alloc(0)), /empty file/],
-    ['a file over 10 MB (declared)', () => mockImageResponse(PNG, { length: String(11 * 1024 * 1024) }), /larger than 10 MB/],
-    ['a network error', () => Promise.reject(new TypeError('fetch failed')), /download failed: fetch failed/],
-    ['a timeout', () => Promise.reject(Object.assign(new Error('timed out'), { name: 'TimeoutError' })), /timed out after 15s/],
+  const GENERIC =
+    'The image link could not be downloaded as a PNG, JPEG, GIF or WebP image (public http(s) links only, max 10 MB). Nothing was saved. Generate a fresh image and resend this story with the same rank immediately.'
+
+  const failures: Array<[string, () => unknown]> = [
+    ['an expired link (HTTP 403)', () => mockImageResponse(HTML, { status: 403, type: 'application/xml' })],
+    ['a missing image (HTTP 404)', () => mockImageResponse(HTML, { status: 404, type: 'text/html' })],
+    ['an expired link that answers 200 with an HTML page', () => mockImageResponse(HTML, { type: 'text/html' })],
+    ['an empty file', () => mockImageResponse(Buffer.alloc(0))],
+    ['a file over 10 MB (declared)', () => mockImageResponse(PNG, { length: String(11 * 1024 * 1024) })],
+    ['a network error', () => Promise.reject(new TypeError('fetch failed'))],
+    ['a timeout', () => Promise.reject(Object.assign(new Error('timed out'), { name: 'TimeoutError' }))],
   ]
 
-  it.each(failures)('saves NOTHING and returns image_failed for %s', async (_label, response, reason) => {
+  // Every download failure returns the SAME text: no status code, content-type
+  // or network error reaches the caller, so the open endpoint can't be used to
+  // probe what the server can reach.
+  it.each(failures)('saves NOTHING and returns the one generic image_failed receipt for %s', async (_label, response) => {
     fetchMock().mockImplementationOnce(response)
     const { result, receipt } = await send(args())
     expect(result.isError).toBe(true)
     expect(receipt).toMatchObject({ success: false, saved: false, record_id: null, code: 'image_failed', image_saved: false })
-    expect(receipt.error).toMatch(reason)
-    expect(receipt.error).toMatch(/Nothing was saved/)
+    expect(receipt.error).toBe(GENERIC)
     expect(tables.ai_news ?? []).toHaveLength(0)
     expect(uploads).toHaveLength(0)
   })
 
-  it('saves nothing when the storage upload fails', async () => {
+  it('logs the real failure reason server-side only', async () => {
+    fetchMock().mockImplementationOnce(() => mockImageResponse(HTML, { status: 403 }))
+    const { receipt } = await send(args())
+    expect(receipt.error).not.toMatch(/403/)
+    expect(console.warn).toHaveBeenCalledWith('send_news image rejected:', 'HTTP 403', 'img.test')
+  })
+
+  it('saves nothing when the storage upload fails, without echoing the storage error', async () => {
     uploadError = 'bucket unavailable'
     const { receipt } = await send(args())
     expect(receipt).toMatchObject({ saved: false, code: 'image_failed' })
-    expect(receipt.error).toMatch(/upload to storage failed: bucket unavailable/)
+    expect(receipt.error).toMatch(/^The image could not be stored\. Nothing was saved/)
+    expect(receipt.error).not.toMatch(/bucket unavailable/)
     expect(tables.ai_news ?? []).toHaveLength(0)
   })
 
@@ -479,5 +528,120 @@ describe('send_news input hardening — every call gets a receipt', () => {
     const { status, json } = await rpc(body)
     expect(status).toBe(400)
     expect(json.error.code).toBe(-32600)
+  })
+})
+
+describe('send_news image download is restricted to public hosts (SSRF)', () => {
+  const fetchMock = () => global.fetch as jest.Mock
+
+  async function expectBlocked(Image: string) {
+    const { receipt } = await send(args({ Image }))
+    expect(receipt).toMatchObject({ saved: false, code: 'image_failed' })
+    expect(fetchMock()).not.toHaveBeenCalled()
+    expect(tables.ai_news ?? []).toHaveLength(0)
+  }
+
+  it.each([
+    'http://127.0.0.1/a.png',
+    'http://10.0.0.5/a.png',
+    'http://172.16.4.4/a.png',
+    'http://192.168.1.1/a.png',
+    'http://169.254.169.254/latest/meta-data',
+    'http://100.64.0.1/a.png',
+    'http://0.0.0.0/a.png',
+    'http://[::1]/a.png',
+    'http://[fd00::1]/a.png',
+    'http://[fe80::1]/a.png',
+    'http://[::ffff:127.0.0.1]/a.png',
+    'http://[::ffff:a9fe:a9fe]/a.png',
+  ])('never requests the internal address %s', async url => {
+    await expectBlocked(url)
+  })
+
+  it('never requests a hostname that resolves to a private address', async () => {
+    dnsLookup.mockResolvedValueOnce([{ address: '10.1.2.3', family: 4 }])
+    await expectBlocked('https://internal.example/a.png')
+  })
+
+  it('blocks a hostname when ANY of its addresses is private', async () => {
+    dnsLookup.mockResolvedValueOnce([
+      { address: '93.184.216.34', family: 4 },
+      { address: '127.0.0.1', family: 4 },
+    ])
+    await expectBlocked('https://mixed.example/a.png')
+  })
+
+  it.each(['https://img.test:8080/a.png', 'https://user:pw@img.test/a.png'])('blocks non-default ports and URL credentials: %s', async url => {
+    await expectBlocked(url)
+  })
+
+  it('blocks when DNS lookup fails', async () => {
+    dnsLookup.mockRejectedValueOnce(new Error('ENOTFOUND'))
+    await expectBlocked('https://nowhere.example/a.png')
+  })
+
+  it('disables automatic redirects', async () => {
+    await send(args())
+    expect(fetchMock().mock.calls[0][1].redirect).toBe('manual')
+  })
+
+  it('follows a redirect to a public host and saves the image', async () => {
+    fetchMock()
+      .mockResolvedValueOnce(mockImageResponse(Buffer.alloc(0), { status: 302, location: 'https://cdn.test/real.png' }))
+      .mockResolvedValueOnce(mockImageResponse(PNG))
+    const { receipt } = await send(args())
+    expect(receipt).toMatchObject({ saved: true, image_saved: true })
+    expect(String(fetchMock().mock.calls[1][0])).toBe('https://cdn.test/real.png')
+  })
+
+  it('re-checks every redirect hop and refuses one that points inside the network', async () => {
+    fetchMock().mockResolvedValueOnce(mockImageResponse(Buffer.alloc(0), { status: 302, location: 'http://169.254.169.254/latest/meta-data' }))
+    const { receipt } = await send(args())
+    expect(receipt).toMatchObject({ saved: false, code: 'image_failed' })
+    expect(fetchMock()).toHaveBeenCalledTimes(1)
+  })
+
+  it('gives up after 3 redirects', async () => {
+    fetchMock().mockImplementation(async () => mockImageResponse(Buffer.alloc(0), { status: 302, location: 'https://loop.test/next' }))
+    const { receipt } = await send(args())
+    expect(receipt).toMatchObject({ saved: false, code: 'image_failed' })
+    expect(fetchMock()).toHaveBeenCalledTimes(4)
+  })
+
+  it('returns the same text for a blocked internal address as for an expired link', async () => {
+    const internal = (await send(args({ Image: 'http://169.254.169.254/x' }))).receipt.error
+    fetchMock().mockImplementationOnce(async () => mockImageResponse(HTML, { status: 403 }))
+    const expired = (await send(args())).receipt.error
+    expect(internal).toBe(expired)
+  })
+})
+
+describe('send_news image size cap cannot be bypassed', () => {
+  const fetchMock = () => global.fetch as jest.Mock
+
+  it('stops reading an endless body with no Content-Length right after 10 MB', async () => {
+    // 1 MB chunks, 1000 available, no Content-Length header
+    const res = mockImageResponse(PNG, { length: null, chunk: 1024 * 1024, chunks: 1000 })
+    fetchMock().mockResolvedValueOnce(res)
+    const { receipt } = await send(args())
+    expect(receipt).toMatchObject({ saved: false, code: 'image_failed' })
+    expect(res.stats.cancelled).toBe(true)
+    expect(res.stats.pulled).toBeLessThanOrEqual(12)
+    expect(uploads).toHaveLength(0)
+  })
+
+  it('stops reading when Content-Length lies (says small, sends large)', async () => {
+    const res = mockImageResponse(PNG, { length: '1000', chunk: 1024 * 1024, chunks: 1000 })
+    fetchMock().mockResolvedValueOnce(res)
+    const { receipt } = await send(args())
+    expect(receipt).toMatchObject({ saved: false, code: 'image_failed' })
+    expect(res.stats.cancelled).toBe(true)
+    expect(res.stats.pulled).toBeLessThanOrEqual(12)
+  })
+
+  it('accepts an image just under the cap delivered in many chunks', async () => {
+    const big = Buffer.concat([PNG, Buffer.alloc(10 * 1024 * 1024 - PNG.length)])
+    fetchMock().mockResolvedValueOnce(mockImageResponse(big, { length: null, chunk: 64 * 1024 }))
+    expect((await send(args())).receipt).toMatchObject({ saved: true, image_saved: true })
   })
 })

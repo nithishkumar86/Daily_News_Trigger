@@ -1,4 +1,6 @@
 import { randomUUID } from 'crypto'
+import { lookup } from 'dns/promises'
+import { isIP } from 'net'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, IMAGE_BUCKET } from '@/lib/supabase'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -140,47 +142,158 @@ async function resolveImage(
     return { ok: true, value, storagePath: null }
   }
 
-  let res: Response
-  try {
-    res = await fetch(value, { signal: AbortSignal.timeout(IMAGE_FETCH_TIMEOUT_MS) })
-  } catch (err) {
-    const timedOut = err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError')
-    return {
-      ok: false,
-      reason: timedOut
-        ? `Image download timed out after ${IMAGE_FETCH_TIMEOUT_MS / 1000}s.`
-        : `Image download failed: ${err instanceof Error ? err.message : 'network error'}.`,
-    }
-  }
-  if (!res.ok) {
-    return { ok: false, reason: `Image download failed with HTTP ${res.status} (the image link has probably expired).` }
-  }
-  const declared = Number(res.headers.get('content-length'))
-  if (declared > MAX_IMAGE_BYTES) return { ok: false, reason: `Image is larger than ${MAX_IMAGE_BYTES / 1024 / 1024} MB.` }
-
-  let buf: Buffer
-  try {
-    buf = Buffer.from(await res.arrayBuffer())
-  } catch {
-    return { ok: false, reason: 'Image download was interrupted before it finished.' }
-  }
-  if (buf.length === 0) return { ok: false, reason: 'Image download returned an empty file.' }
-  if (buf.length > MAX_IMAGE_BYTES) return { ok: false, reason: `Image is larger than ${MAX_IMAGE_BYTES / 1024 / 1024} MB.` }
-  const ext = sniffImage(buf)
-  if (!ext) {
-    return {
-      ok: false,
-      reason: `Image link did not return an image (content-type "${res.headers.get('content-type') ?? 'unknown'}"); the link has probably expired.`,
-    }
+  // The endpoint is open (rule 6), so the caller learns nothing about why a
+  // download failed — a detailed status/error would let anyone probe what the
+  // server can reach. The real reason goes to the server log only.
+  const dl = await downloadImage(value)
+  const ext = dl.ok ? sniffImage(dl.buf) : null
+  if (!dl.ok || !ext) {
+    console.warn('send_news image rejected:', dl.ok ? 'not a PNG/JPEG/GIF/WebP' : dl.detail, safeHost(value))
+    return { ok: false, reason: IMAGE_DOWNLOAD_FAILED }
   }
 
   // Name keeps the `${date}-rank${rank}` prefix lib/cleanup.ts reads the date from
   const path = `${table}/${date}-rank${rank}-${randomUUID().slice(0, 8)}.${ext}`
   const { error } = await supabase.storage
     .from(IMAGE_BUCKET)
-    .upload(path, buf, { contentType: IMAGE_MIME[ext], upsert: false })
-  if (error) return { ok: false, reason: `Image upload to storage failed: ${error.message}.` }
+    .upload(path, dl.buf, { contentType: IMAGE_MIME[ext], upsert: false })
+  if (error) {
+    console.error('send_news image upload failed:', error.message)
+    return { ok: false, reason: 'The image could not be stored.' }
+  }
   return { ok: true, value: supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path).data.publicUrl, storagePath: path }
+}
+
+const IMAGE_DOWNLOAD_FAILED =
+  'The image link could not be downloaded as a PNG, JPEG, GIF or WebP image (public http(s) links only, max 10 MB).'
+const MAX_REDIRECTS = 3
+
+function safeHost(url: string): string {
+  try {
+    return new URL(url).host
+  } catch {
+    return '(unparseable url)'
+  }
+}
+
+function isPublicIPv4(ip: string): boolean {
+  const [a, b, c] = ip.split('.').map(Number)
+  if (a === 0 || a === 10 || a === 127 || a >= 224) return false // this-net, private, loopback, multicast/reserved
+  if (a === 100 && b >= 64 && b <= 127) return false // carrier-grade NAT
+  if (a === 169 && b === 254) return false // link-local, incl. cloud metadata 169.254.169.254
+  if (a === 172 && b >= 16 && b <= 31) return false
+  if (a === 192 && b === 168) return false
+  if (a === 192 && b === 0 && c === 0) return false
+  if (a === 198 && (b === 18 || b === 19)) return false // benchmarking
+  return true
+}
+
+function isPublicIP(ip: string): boolean {
+  if (isIP(ip) === 4) return isPublicIPv4(ip)
+  const v6 = ip.toLowerCase()
+  // IPv4-mapped / NAT64 forms carry an IPv4 address that must be checked too
+  const dotted = v6.match(/^(?:::ffff:|64:ff9b::)(\d+\.\d+\.\d+\.\d+)$/)
+  if (dotted) return isPublicIPv4(dotted[1])
+  const hex = v6.match(/^(?:::ffff:|64:ff9b::)([0-9a-f]{1,4}):([0-9a-f]{1,4})$/)
+  if (hex) {
+    const hi = parseInt(hex[1], 16)
+    const lo = parseInt(hex[2], 16)
+    return isPublicIPv4(`${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`)
+  }
+  if (v6 === '::' || v6 === '::1') return false
+  if (/^f[cd]/.test(v6)) return false // unique-local fc00::/7
+  if (/^fe[89ab]/.test(v6)) return false // link-local fe80::/10
+  if (/^ff/.test(v6)) return false // multicast
+  return true
+}
+
+// Only public http(s) hosts on default ports: every address the name resolves
+// to must be public, so the download can't be aimed at internal services.
+async function publicUrlProblem(url: URL): Promise<string | null> {
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') return `scheme ${url.protocol}`
+  if (url.username || url.password) return 'credentials in URL'
+  if (url.port && url.port !== '80' && url.port !== '443') return `port ${url.port}`
+  const host = url.hostname.replace(/^\[|\]$/g, '')
+  let addresses: string[]
+  try {
+    addresses = isIP(host) ? [host] : (await lookup(host, { all: true, verbatim: true })).map(a => a.address)
+  } catch {
+    return 'DNS lookup failed'
+  }
+  if (addresses.length === 0) return 'no DNS addresses'
+  const blocked = addresses.find(a => !isPublicIP(a))
+  return blocked ? `non-public address ${blocked}` : null
+}
+
+type Download = { ok: true; buf: Buffer } | { ok: false; detail: string }
+
+// Redirects are followed by hand so every hop is re-checked as public. The body
+// is streamed with a running byte count and cancelled the moment it passes the
+// cap, so a missing or lying Content-Length can't make us buffer a huge file.
+// One 15s deadline covers every hop and the whole body.
+async function downloadImage(start: string): Promise<Download> {
+  const signal = AbortSignal.timeout(IMAGE_FETCH_TIMEOUT_MS)
+  let url: URL
+  try {
+    url = new URL(start)
+  } catch {
+    return { ok: false, detail: 'unparseable URL' }
+  }
+
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    const problem = await publicUrlProblem(url)
+    if (problem) return { ok: false, detail: `blocked: ${problem}` }
+
+    let res: Response
+    try {
+      res = await fetch(url, { signal, redirect: 'manual' })
+    } catch (err) {
+      return { ok: false, detail: `fetch error: ${err instanceof Error ? `${err.name} ${err.message}` : 'unknown'}` }
+    }
+
+    if (res.status >= 300 && res.status < 400) {
+      await res.body?.cancel().catch(() => {})
+      const location = res.headers.get('location')
+      if (!location) return { ok: false, detail: `redirect ${res.status} without Location` }
+      try {
+        url = new URL(location, url)
+      } catch {
+        return { ok: false, detail: 'unparseable redirect Location' }
+      }
+      continue
+    }
+
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => {})
+      return { ok: false, detail: `HTTP ${res.status}` }
+    }
+    if (Number(res.headers.get('content-length')) > MAX_IMAGE_BYTES) {
+      await res.body?.cancel().catch(() => {})
+      return { ok: false, detail: 'declared size over cap' }
+    }
+    if (!res.body) return { ok: false, detail: 'empty body' }
+
+    const reader = res.body.getReader()
+    const chunks: Buffer[] = []
+    let total = 0
+    try {
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        total += value.byteLength
+        if (total > MAX_IMAGE_BYTES) {
+          await reader.cancel().catch(() => {})
+          return { ok: false, detail: 'streamed size over cap' }
+        }
+        chunks.push(Buffer.from(value.buffer, value.byteOffset, value.byteLength))
+      }
+    } catch (err) {
+      return { ok: false, detail: `body read error: ${err instanceof Error ? err.name : 'unknown'}` }
+    }
+    if (total === 0) return { ok: false, detail: 'empty body' }
+    return { ok: true, buf: Buffer.concat(chunks) }
+  }
+  return { ok: false, detail: 'too many redirects' }
 }
 
 // Every send_news result is an explicit receipt: the agent may only count an
