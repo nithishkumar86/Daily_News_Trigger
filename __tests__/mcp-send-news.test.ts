@@ -61,14 +61,46 @@ function makeQuery(table: string) {
   return q
 }
 
+const removed: string[] = []
+let uploadError: string | null = null
+
 const fakeClient = {
   from: (t: string) => makeQuery(t),
   storage: {
     from: () => ({
-      upload: async (path: string) => (uploads.push(path), { error: null }),
+      upload: async (path: string, _buf: Buffer, opts: { upsert?: boolean }) => {
+        if (uploadError) return { error: { message: uploadError } }
+        // Mirror Storage: with upsert:false an existing object is never replaced
+        if (!opts?.upsert && uploads.includes(path)) return { error: { message: 'The resource already exists' } }
+        uploads.push(path)
+        return { error: null }
+      },
+      remove: async (paths: string[]) => {
+        removed.push(...paths)
+        for (const p of paths) uploads.splice(uploads.indexOf(p), 1)
+        return { error: null }
+      },
       getPublicUrl: (path: string) => ({ data: { publicUrl: `https://storage.test/${path}` } }),
     }),
   },
+}
+
+// Real magic bytes, so the route's image sniffing sees genuine files
+const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13])
+const JPG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 16])
+const HTML = Buffer.from('<html><body>AccessDenied: link expired</body></html>')
+
+function mockImageResponse(body: Buffer, opts: { status?: number; type?: string; length?: string } = {}) {
+  const status = opts.status ?? 200
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: {
+      get: (h: string) =>
+        h.toLowerCase() === 'content-type' ? opts.type ?? 'image/png' : h.toLowerCase() === 'content-length' ? opts.length ?? String(body.length) : null,
+    },
+    arrayBuffer: async () => body.buffer.slice(body.byteOffset, body.byteOffset + body.length),
+  }
 }
 
 jest.mock('@/lib/supabase', () => ({
@@ -107,12 +139,10 @@ beforeEach(() => {
   jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-16T10:00:00Z'))
   for (const k of Object.keys(tables)) delete tables[k]
   uploads.length = 0
+  removed.length = 0
+  uploadError = null
   nextId = 1
-  global.fetch = jest.fn(async () => ({
-    ok: true,
-    headers: { get: () => 'image/png' },
-    arrayBuffer: async () => new ArrayBuffer(4),
-  })) as unknown as typeof fetch
+  global.fetch = jest.fn(async () => mockImageResponse(PNG)) as unknown as typeof fetch
 })
 
 afterEach(() => jest.restoreAllMocks())
@@ -269,5 +299,185 @@ describe('send_news files every item under the IST arrival date', () => {
     const tool = (await (await POST(req)).json()).result.tools[0]
     expect(tool.inputSchema.required).not.toContain('Date')
     expect(tool.inputSchema.properties.Date).toBeDefined()
+  })
+})
+
+describe('send_news only reports success when the story AND its image are saved', () => {
+  const fetchMock = () => global.fetch as jest.Mock
+
+  it('success receipt carries image_saved:true and the permanent storage image_url, stored on the row', async () => {
+    const { receipt } = await send(args())
+    expect(receipt).toMatchObject({ saved: true, image_saved: true })
+    expect(receipt.image_url).toMatch(/^https:\/\/storage\.test\/ai_news\/2026-10-16-rank1-[0-9a-f]{8}\.png$/)
+    expect(tables.ai_news[0].Image).toBe(receipt.image_url)
+    expect(uploads).toHaveLength(1)
+  })
+
+  it('names the file by its real bytes (JPEG served as image/png is stored as .jpg)', async () => {
+    fetchMock().mockResolvedValueOnce(mockImageResponse(JPG, { type: 'image/png' }))
+    expect((await send(args())).receipt.image_url).toMatch(/\.jpg$/)
+  })
+
+  const failures: Array<[string, () => unknown, RegExp]> = [
+    ['an expired link (HTTP 403)', () => mockImageResponse(HTML, { status: 403, type: 'application/xml' }), /HTTP 403/],
+    ['an expired link that answers 200 with an HTML page', () => mockImageResponse(HTML, { type: 'text/html' }), /did not return an image/],
+    ['an empty file', () => mockImageResponse(Buffer.alloc(0)), /empty file/],
+    ['a file over 10 MB (declared)', () => mockImageResponse(PNG, { length: String(11 * 1024 * 1024) }), /larger than 10 MB/],
+    ['a network error', () => Promise.reject(new TypeError('fetch failed')), /download failed: fetch failed/],
+    ['a timeout', () => Promise.reject(Object.assign(new Error('timed out'), { name: 'TimeoutError' })), /timed out after 15s/],
+  ]
+
+  it.each(failures)('saves NOTHING and returns image_failed for %s', async (_label, response, reason) => {
+    fetchMock().mockImplementationOnce(response)
+    const { result, receipt } = await send(args())
+    expect(result.isError).toBe(true)
+    expect(receipt).toMatchObject({ success: false, saved: false, record_id: null, code: 'image_failed', image_saved: false })
+    expect(receipt.error).toMatch(reason)
+    expect(receipt.error).toMatch(/Nothing was saved/)
+    expect(tables.ai_news ?? []).toHaveLength(0)
+    expect(uploads).toHaveLength(0)
+  })
+
+  it('saves nothing when the storage upload fails', async () => {
+    uploadError = 'bucket unavailable'
+    const { receipt } = await send(args())
+    expect(receipt).toMatchObject({ saved: false, code: 'image_failed' })
+    expect(receipt.error).toMatch(/upload to storage failed: bucket unavailable/)
+    expect(tables.ai_news ?? []).toHaveLength(0)
+  })
+
+  it('passes the download a timeout signal so a hanging link cannot hang the request', async () => {
+    await send(args())
+    expect(fetchMock().mock.calls[0][1].signal).toBeInstanceOf(AbortSignal)
+  })
+
+  it('accepts a real base64 image (raw or data URI) and stores it inline', async () => {
+    const raw = await send(args({ Image: PNG.toString('base64') }))
+    expect(raw.receipt).toMatchObject({ saved: true, image_saved: true, image_url: null })
+    const uri = await send(args({ Rank: '2', Link: 'https://news.test/b', Image: `data:image/jpeg;base64,${JPG.toString('base64')}` }))
+    expect(uri.receipt.saved).toBe(true)
+    expect(tables.ai_news.map(r => r.Image)).toEqual([PNG.toString('base64'), `data:image/jpeg;base64,${JPG.toString('base64')}`])
+    expect(fetchMock()).not.toHaveBeenCalled()
+  })
+
+  it('rejects base64 that is not an image, and text that is neither URL nor base64', async () => {
+    const notImage = await send(args({ Image: HTML.toString('base64') }))
+    expect(notImage.receipt).toMatchObject({ saved: false, code: 'image_failed' })
+    const junk = await send(args({ Image: 'no image available' }))
+    expect(junk.receipt).toMatchObject({ saved: false, code: 'image_failed' })
+    expect(tables.ai_news ?? []).toHaveLength(0)
+  })
+
+  it('removes the just-uploaded image when the row insert then fails (23505 race)', async () => {
+    const origFrom = fakeClient.from
+    let calls = 0
+    fakeClient.from = (t: string) => {
+      if (++calls === 3) tables.ai_news = [{ id: 999, Date: '2026-10-16', Rank: '1', Link: 'https://news.test/racer', Title: 'Racer', Image: 'https://storage.test/racer.png' }]
+      return origFrom(t)
+    }
+    try {
+      const { receipt } = await send(args())
+      expect(receipt).toMatchObject({ saved: false, code: 'slot_taken' })
+      expect(removed).toHaveLength(1)
+      expect(uploads).toHaveLength(0)
+      expect(tables.ai_news[0]).toMatchObject({ id: 999, Image: 'https://storage.test/racer.png' })
+    } finally {
+      fakeClient.from = origFrom
+    }
+  })
+
+  it('never reuses an image file name, so no story can overwrite another story\'s image', async () => {
+    await send(args({ Title: 'v1' }))
+    await send(args({ Title: 'v2' })) // same link, same slot → retry/update with a fresh file
+    expect(uploads).toHaveLength(2)
+    expect(new Set(uploads).size).toBe(2)
+  })
+})
+
+describe('send_news input hardening — every call gets a receipt', () => {
+  async function rpc(body: unknown) {
+    const req = new NextRequest('http://localhost/api/mcp', { method: 'POST', body: JSON.stringify(body) })
+    const res = await POST(req)
+    return { status: res.status, json: await res.json() }
+  }
+
+  it.each([
+    ['an object Title', { Title: { x: 1 } }],
+    ['an array Summary', { Summary: ['a'] }],
+    ['a number Image', { Image: 42 }],
+  ])('returns a validation receipt (not a crash) for %s', async (_l, over) => {
+    const { json } = await rpc({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'send_news', arguments: { ...args(), ...over } } })
+    const r = JSON.parse(json.result.content[0].text)
+    expect(r).toMatchObject({ saved: false, code: 'validation' })
+    expect(r.error).toMatch(/must be a string/)
+    expect(tables.ai_news ?? []).toHaveLength(0)
+  })
+
+  it('accepts a numeric Rank (the old handler did) and stores it as a string', async () => {
+    const { json } = await (async () => {
+      const req = new NextRequest('http://localhost/api/mcp', { method: 'POST', body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'send_news', arguments: { ...args(), Rank: 4 } } }) })
+      return { json: await (await POST(req)).json() }
+    })()
+    expect(JSON.parse(json.result.content[0].text)).toMatchObject({ saved: true, rank: '4' })
+    expect(tables.ai_news[0].Rank).toBe('4')
+  })
+
+  it.each(['3abc', '0', '11', '1.5', '-2', ' '])('rejects Rank %p', async Rank => {
+    const { receipt } = await send(args({ Rank }))
+    expect(receipt).toMatchObject({ saved: false, code: 'validation' })
+  })
+
+  it('normalizes Rank "03" to "3" and trims Link before saving', async () => {
+    const { receipt } = await send(args({ Rank: ' 03 ', Link: '  https://news.test/story-a  ' }))
+    expect(receipt).toMatchObject({ saved: true, rank: '3' })
+    expect(tables.ai_news[0]).toMatchObject({ Rank: '3', Link: 'https://news.test/story-a' })
+  })
+
+  it('rejects whitespace-only Title/Summary and a whitespace-padded short Summary', async () => {
+    expect((await send(args({ Title: '   ' }))).receipt.error).toMatch(/Missing required fields: Title/)
+    expect((await send(args({ Summary: ' '.repeat(600) }))).receipt.error).toMatch(/Missing required fields: Summary/)
+    expect((await send(args({ Summary: 'x'.repeat(100) + ' '.repeat(500) }))).receipt.error).toMatch(/at least 500/)
+  })
+
+  it.each([
+    ['not a URL', 'news article'],
+    ['a non-http scheme', 'ftp://news.test/a'],
+    ['a javascript: URL', 'javascript:alert(1)'],
+    ['a quote that would break the duplicate filter', 'https://news.test/a"b'],
+    ['a backslash', String.raw`https://news.test/a\b`],
+  ])('rejects a Link that is %s', async (_l, Link) => {
+    const { receipt } = await send(args({ Link }))
+    expect(receipt).toMatchObject({ saved: false, code: 'validation' })
+    expect(tables.ai_news ?? []).toHaveLength(0)
+  })
+
+  it('accepts a Link with commas and parentheses (quoted safely in the filter)', async () => {
+    expect((await send(args({ Link: 'https://news.test/a,(b)' }))).receipt.saved).toBe(true)
+  })
+
+  it('turns an unexpected exception into a server_error receipt', async () => {
+    const origFrom = fakeClient.from
+    fakeClient.from = () => {
+      throw new Error('boom')
+    }
+    try {
+      const { result, receipt } = await send(args())
+      expect(result.isError).toBe(true)
+      expect(receipt).toMatchObject({ success: false, saved: false, code: 'server_error' })
+      expect(receipt.error).toMatch(/boom/)
+    } finally {
+      fakeClient.from = origFrom
+    }
+  })
+
+  it('treats non-object arguments as missing fields, not a crash', async () => {
+    const { json } = await rpc({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'send_news', arguments: ['x'] } })
+    expect(JSON.parse(json.result.content[0].text)).toMatchObject({ code: 'validation' })
+  })
+
+  it.each([null, [1, 2], 'text'])('answers an invalid JSON-RPC body %p with -32600, not a crash', async body => {
+    const { status, json } = await rpc(body)
+    expect(status).toBe(400)
+    expect(json.error.code).toBe(-32600)
   })
 })
