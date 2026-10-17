@@ -16,7 +16,7 @@ export default function AIPage() {
       emptyIcon="🤖"
       emptyLabel="AI news"
       countNoun={['article', 'articles']}
-      searchSuggestions={['Claude', 'ChatGPT', 'Gemini', 'Meta', 'NVIDIA', 'Moonshot']}
+      searchSuggestions={['Claude', 'ChatGPT', 'Gemini', 'Meta', 'NVIDIA', 'Chinese AI']}
     />
   )
 }

@@ -42,30 +42,30 @@ const compact = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '')
 // ("…unlike Claude…"), and two-lab headlines ("OpenAI and Anthropic…") belong to neither filter.
 // Aliases are whole words ("nano banana" = consecutive words); a trailing * is a prefix ("gpt*" → GPT-4o).
 // Plain "google" is deliberately not a Gemini alias: most Google stories aren't about Gemini.
-// "moonshot" is the CHINESE AI bucket (see CHINESE_AI); its aliases here are only what can be typed to open it.
+// "chineseai" is the CHINESE AI bucket (see CHINESE_AI); its aliases here are only what can be typed to open it.
 export const BRAND_ALIASES: Record<string, string[]> = {
   claude: ['claude', 'anthropic'],
   chatgpt: ['chatgpt', 'openai', 'open ai', 'gpt*'],
   gemini: ['gemini', 'nano banana'],
   meta: ['meta', 'llama*'],
   nvidia: ['nvidia', 'nemotron'],
-  moonshot: ['moonshot', 'china', 'chinese'],
+  chineseai: ['chinese ai', 'chinese', 'china', 'moonshot'],
 }
 
-// Any Chinese model, lab or China-wide headline goes to Moonshot — even one that also names Claude or
+// Any Chinese model, lab or China-wide headline goes to Chinese AI — even one that also names Claude or
 // NVIDIA ("Chinese labs distilled Claude") — and never to any other brand.
 const CHINESE_AI = [
   'moonshot', 'kimi', 'china', 'chinese', 'deepseek', 'qwen', 'alibaba', 'baidu', 'ernie',
   'minimax', 'zhipu', 'glm*', 'bytedance', 'doubao', 'tencent', 'hunyuan',
 ]
 // A US-brand headline whose SUMMARY is about China ("…diverted Nvidia AI servers to China…") is China
-// news too → Moonshot only. Places, not lab names: a summary that just lists a Chinese model among
+// news too → Chinese AI only. Places, not lab names: a summary that just lists a Chinese model among
 // test subjects ("…GLM and others…") doesn't make an Anthropic research story Chinese.
 const CHINA_PLACES = ['china', 'chinese', 'beijing']
 // Non-Chinese labs with no filter of their own — naming one makes a headline "not only <brand>"
 const OTHER_LABS = ['grok', 'xai', 'mistral']
 
-const US_BRAND_ALIASES = Object.entries(BRAND_ALIASES).filter(([b]) => b !== 'moonshot').flatMap(([, a]) => a)
+const US_BRAND_ALIASES = Object.entries(BRAND_ALIASES).filter(([b]) => b !== 'chineseai').flatMap(([, a]) => a)
 
 const titleWords = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean)
 
@@ -92,10 +92,10 @@ function matchesBrand(title: string, summary: string, brand: string): boolean {
   const chinese =
     CHINESE_AI.some(a => hasAlias(words, a)) ||
     (US_BRAND_ALIASES.some(a => hasAlias(words, a)) && CHINA_PLACES.some(a => hasAlias(summaryWords, a)))
-  if (brand === 'moonshot') return chinese
+  if (brand === 'chineseai') return chinese
   if (chinese || !BRAND_ALIASES[brand].some(a => hasAlias(words, a))) return false
   const rivals = [
-    ...Object.entries(BRAND_ALIASES).filter(([b]) => b !== brand && b !== 'moonshot').flatMap(([, aliases]) => aliases),
+    ...Object.entries(BRAND_ALIASES).filter(([b]) => b !== brand && b !== 'chineseai').flatMap(([, aliases]) => aliases),
     ...OTHER_LABS,
   ]
   return !rivals.some(a => hasAlias(words, a))

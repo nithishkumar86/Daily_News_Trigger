@@ -364,7 +364,15 @@ describe('matchesQuery (topic-tab search)', () => {
       expect(matchesQuery(item('Anthropic Replaces Git Internally'), 'moonshot')).toBe(false)
     })
 
-    it('typing "chinese" or "china" opens the Moonshot bucket; a lab name stays a normal search', () => {
+    it('the "Chinese AI" button (and typing "Chinese AI" / "moonshot") opens the Chinese bucket', () => {
+      const cn = item('DeepSeek V4 tops open-weight charts')
+      expect(matchesQuery(cn, 'Chinese AI')).toBe(true)
+      expect(matchesQuery(cn, 'chinese ai')).toBe(true)
+      expect(matchesQuery(cn, 'moonshot')).toBe(true)
+      expect(matchesQuery(item('NVIDIA Releases Compact Dory 1.0'), 'Chinese AI')).toBe(false)
+    })
+
+    it('typing "chinese" or "china" opens the Chinese AI bucket; a lab name stays a normal search', () => {
       expect(matchesQuery(item('DeepSeek V4 tops open-weight charts'), 'chinese')).toBe(true)
       expect(matchesQuery(item('Alibaba Qwen 4 adds agent mode'), 'China')).toBe(true)
       expect(matchesQuery(item('Alibaba Qwen 4 adds agent mode'), 'deepseek')).toBe(false)
