@@ -11,7 +11,7 @@ jest.mock('@/lib/supabase', () => ({
 
 const mockGetServerSupabase = supabaseModule.getServerSupabase as jest.Mock
 
-const NEWS_TABLES = ['ai_news', 'investment_news', 'job_hire_fire'] as const
+const NEWS_TABLES = ['ai_news', 'investment_news', 'job_hire_fire', 'real_estate_news'] as const
 
 interface Row {
   Date: string
@@ -149,7 +149,7 @@ describe('retention flow: GET /api/check-cleanup → runCleanup → store', () =
       deleted_ai: 1,
       deleted_investment: 1,
       deleted_job: 1,
-      deleted_images: 3,
+      deleted_images: 4,
     })
     for (const t of NEWS_TABLES) {
       expect(store.rows[t].map(r => r.Date)).toEqual([utcDaysBefore(nowMs, 0), utcDaysBefore(nowMs, 14)])

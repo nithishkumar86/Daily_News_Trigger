@@ -10,7 +10,7 @@ export interface NewsItem {
   created_at?: string
 }
 
-export type TableName = 'ai_news' | 'investment_news' | 'job_hire_fire'
+export type TableName = 'ai_news' | 'investment_news' | 'job_hire_fire' | 'real_estate_news'
 
 // A news row tagged with the table it came from (for multi-table feeds)
 export type FeedItem = NewsItem & { source: TableName }

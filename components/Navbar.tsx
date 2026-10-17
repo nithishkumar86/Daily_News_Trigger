@@ -17,6 +17,7 @@ const newsLinks = [
   { href: '/ai', label: 'AI' },
   { href: '/investment', label: 'Invest' },
   { href: '/job', label: 'Jobs' },
+  { href: '/realestate', label: 'Real Estate' },
 ]
 
 function toolClass(active: boolean): string {

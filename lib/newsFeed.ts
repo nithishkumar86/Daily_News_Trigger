@@ -11,6 +11,7 @@ export const SOURCE_LABEL: Record<TableName, string> = {
   ai_news: 'AI',
   investment_news: 'Invest',
   job_hire_fire: 'Jobs',
+  real_estate_news: 'Real Estate',
 }
 
 export function tagSource(rows: NewsItem[], source: TableName): FeedItem[] {

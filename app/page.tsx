@@ -86,6 +86,12 @@ export default function HomePage() {
             >
               Job News
             </Link>
+            <Link
+              href="/realestate"
+              className="min-h-[56px] flex items-center justify-center px-8 py-4 bg-[--bg-elevated] border border-[--border-subtle] text-[--text-primary] text-lg rounded-xl font-medium hover:border-[--accent-emerald] transition-all w-full sm:w-auto"
+            >
+              Real Estate News
+            </Link>
           </div>
         </div>
       </section>

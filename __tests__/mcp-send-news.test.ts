@@ -215,9 +215,23 @@ describe('send_news receipt', () => {
     expect((await send(args())).receipt.action).toBe('inserted')
   })
 
-  it('routes investment and job topics to their own tables in the receipt', async () => {
+  it('routes investment, job, and real estate topics to their own tables in the receipt', async () => {
     expect((await send(args({ Topic: 'funding' }))).receipt.table).toBe('investment_news')
     expect((await send(args({ Topic: 'hiring' }))).receipt.table).toBe('job_hire_fire')
+    expect((await send(args({ Topic: 'property' }))).receipt.table).toBe('real_estate_news')
+  })
+
+  it('routes every real estate topic keyword to real_estate_news, and never mixes it with ai/investment/job', async () => {
+    const topics = ['realestate', 'property', 'housing', 'realty']
+    for (let i = 0; i < topics.length; i++) {
+      const topic = topics[i]
+      const { receipt } = await send(args({ Rank: String(i + 1), Topic: topic, Link: `https://news.test/re-${topic}` }))
+      expect(receipt.table).toBe('real_estate_news')
+    }
+    expect(tables.ai_news ?? []).toHaveLength(0)
+    expect(tables.investment_news ?? []).toHaveLength(0)
+    expect(tables.job_hire_fire ?? []).toHaveLength(0)
+    expect(tables.real_estate_news).toHaveLength(4)
   })
 })
 

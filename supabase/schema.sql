@@ -44,6 +44,21 @@ CREATE TABLE IF NOT EXISTS job_hire_fire (
 
 CREATE UNIQUE INDEX IF NOT EXISTS job_hire_fire_date_rank ON job_hire_fire ("Date", "Rank");
 
+-- Real Estate News Table
+CREATE TABLE IF NOT EXISTS real_estate_news (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "Rank"      INTEGER NOT NULL,
+  "Topic"     TEXT NOT NULL,
+  "Title"     TEXT NOT NULL,
+  "Summary"   TEXT NOT NULL,
+  "Image"     TEXT,
+  "Link"      TEXT NOT NULL,
+  "Date"      DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS real_estate_news_date_rank ON real_estate_news ("Date", "Rank");
+
 -- Cleanup Log Table
 CREATE TABLE IF NOT EXISTS cleanup_log (
   id            INTEGER PRIMARY KEY DEFAULT 1,
@@ -57,6 +72,7 @@ ON CONFLICT (id) DO NOTHING;
 ALTER TABLE ai_news ENABLE ROW LEVEL SECURITY;
 ALTER TABLE investment_news ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_hire_fire ENABLE ROW LEVEL SECURITY;
+ALTER TABLE real_estate_news ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cleanup_log ENABLE ROW LEVEL SECURITY;
 
 -- Public read policies (anon key can SELECT)
@@ -87,6 +103,15 @@ CREATE POLICY "Service insert job_hire_fire" ON job_hire_fire FOR INSERT WITH CH
 DROP POLICY IF EXISTS "Service delete job_hire_fire" ON job_hire_fire;
 CREATE POLICY "Service delete job_hire_fire" ON job_hire_fire FOR DELETE USING (true);
 
+DROP POLICY IF EXISTS "Public read real_estate_news" ON real_estate_news;
+CREATE POLICY "Public read real_estate_news" ON real_estate_news FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Service insert real_estate_news" ON real_estate_news;
+CREATE POLICY "Service insert real_estate_news" ON real_estate_news FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Service delete real_estate_news" ON real_estate_news;
+CREATE POLICY "Service delete real_estate_news" ON real_estate_news FOR DELETE USING (true);
+
 DROP POLICY IF EXISTS "Public read cleanup_log" ON cleanup_log;
 CREATE POLICY "Public read cleanup_log" ON cleanup_log FOR SELECT USING (true);
 
@@ -112,6 +137,12 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_publication_tables
     WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'job_hire_fire')
   THEN ALTER PUBLICATION supabase_realtime ADD TABLE job_hire_fire; END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'real_estate_news')
+  THEN ALTER PUBLICATION supabase_realtime ADD TABLE real_estate_news; END IF;
 END $$;
 
 -- Storage: public bucket for daily news cover images.

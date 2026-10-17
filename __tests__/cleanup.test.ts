@@ -7,6 +7,7 @@ jest.mock('@/lib/supabase', () => ({
   AI_NEWS_TABLE: 'ai_news',
   INVESTMENT_NEWS_TABLE: 'investment_news',
   JOB_NEWS_TABLE: 'job_hire_fire',
+  REAL_ESTATE_NEWS_TABLE: 'real_estate_news',
   CLEANUP_LOG_TABLE: 'cleanup_log',
 }))
 
@@ -32,7 +33,8 @@ function buildMockSupabase(
   ai: TableOutcome,
   inv: TableOutcome,
   job: TableOutcome,
-  content: ContentJobsOutcome = {}
+  content: ContentJobsOutcome = {},
+  realEstate: TableOutcome = ok(0)
 ) {
   const upsert = jest.fn().mockResolvedValue({ error: null })
   const ltByTable: Record<string, jest.Mock> = {}
@@ -76,6 +78,7 @@ function buildMockSupabase(
       if (table === 'ai_news') return makeMockChain(table, ai)
       if (table === 'investment_news') return makeMockChain(table, inv)
       if (table === 'job_hire_fire') return makeMockChain(table, job)
+      if (table === 'real_estate_news') return makeMockChain(table, realEstate)
       if (table === 'content_jobs') return contentJobsSelectChain
       if (table === 'image_jobs') return imageJobsDeleteChain
       return { upsert }
@@ -124,6 +127,7 @@ describe('runCleanup', () => {
     expect(result.deleted_ai).toBe(3)
     expect(result.deleted_investment).toBe(2)
     expect(result.deleted_job).toBe(4)
+    expect(result.deleted_real_estate).toBe(0)
     expect(result.success).toBe(true)
     expect(result.errors).toEqual([])
     expect(upsert).toHaveBeenCalledTimes(1)
@@ -140,7 +144,7 @@ describe('runCleanup', () => {
     await runCleanup()
 
     const expectedCutoff = utcDaysBefore(nowMs, 14)
-    for (const table of ['ai_news', 'investment_news', 'job_hire_fire']) {
+    for (const table of ['ai_news', 'investment_news', 'job_hire_fire', 'real_estate_news']) {
       expect(ltByTable[table]).toHaveBeenCalledTimes(1)
       expect(ltByTable[table]).toHaveBeenCalledWith('Date', expectedCutoff)
     }
@@ -155,6 +159,7 @@ describe('runCleanup', () => {
     expect(result.deleted_ai).toBe(0)
     expect(result.deleted_investment).toBe(0)
     expect(result.deleted_job).toBe(0)
+    expect(result.deleted_real_estate).toBe(0)
     expect(result.success).toBe(true)
   })
 

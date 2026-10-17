@@ -3,6 +3,7 @@ import {
   AI_NEWS_TABLE,
   INVESTMENT_NEWS_TABLE,
   JOB_NEWS_TABLE,
+  REAL_ESTATE_NEWS_TABLE,
   CLEANUP_LOG_TABLE,
   IMAGE_BUCKET,
 } from './supabase'
@@ -92,6 +93,7 @@ export interface CleanupResult {
   deleted_ai: number
   deleted_investment: number
   deleted_job: number
+  deleted_real_estate: number
   deleted_images: number
   deleted_content_jobs: number
   deleted_content_images: number
@@ -134,6 +136,15 @@ export async function runCleanup(): Promise<CleanupResult> {
     errors.push(`${JOB_NEWS_TABLE}: ${jobErr.message}`)
   }
 
+  const { count: realEstateCount, error: realEstateErr } = await supabase
+    .from(REAL_ESTATE_NEWS_TABLE)
+    .delete({ count: 'exact' })
+    .lt('Date', cutoff)
+  if (realEstateErr) {
+    console.error('cleanup real_estate_news delete failed:', realEstateErr)
+    errors.push(`${REAL_ESTATE_NEWS_TABLE}: ${realEstateErr.message}`)
+  }
+
   // Mirror the DB cleanup in Storage: remove cover images dated before the cutoff.
   // Wrapped so a storage hiccup never blocks the DB cleanup / log update.
   let deletedImages = 0
@@ -141,6 +152,7 @@ export async function runCleanup(): Promise<CleanupResult> {
     deletedImages += await cleanupBucketFolder(supabase, AI_NEWS_TABLE, cutoff)
     deletedImages += await cleanupBucketFolder(supabase, INVESTMENT_NEWS_TABLE, cutoff)
     deletedImages += await cleanupBucketFolder(supabase, JOB_NEWS_TABLE, cutoff)
+    deletedImages += await cleanupBucketFolder(supabase, REAL_ESTATE_NEWS_TABLE, cutoff)
   } catch {
     // ignore — image cleanup is best-effort
   }
@@ -179,6 +191,7 @@ export async function runCleanup(): Promise<CleanupResult> {
     deleted_ai: aiCount ?? 0,
     deleted_investment: invCount ?? 0,
     deleted_job: jobCount ?? 0,
+    deleted_real_estate: realEstateCount ?? 0,
     deleted_images: deletedImages,
     deleted_content_jobs: deletedContentJobs,
     deleted_content_images: deletedContentImages,

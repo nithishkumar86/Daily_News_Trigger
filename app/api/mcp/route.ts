@@ -14,13 +14,15 @@ const SERVER_INFO = {
 const AI_TOPICS = ['trending', 'ai', 'tools', 'models']
 const INVESTMENT_TOPICS = ['startup', 'investment', 'funding', 'company']
 const JOB_TOPICS = ['hiring', 'layoffs', 'jobs', 'hr']
-const ALL_VALID_TOPICS = [...AI_TOPICS, ...INVESTMENT_TOPICS, ...JOB_TOPICS]
+const REAL_ESTATE_TOPICS = ['realestate', 'property', 'housing', 'realty']
+const ALL_VALID_TOPICS = [...AI_TOPICS, ...INVESTMENT_TOPICS, ...JOB_TOPICS, ...REAL_ESTATE_TOPICS]
 
-function resolveTable(topic: string): 'ai_news' | 'investment_news' | 'job_hire_fire' | null {
+function resolveTable(topic: string): 'ai_news' | 'investment_news' | 'job_hire_fire' | 'real_estate_news' | null {
   const t = topic.toLowerCase().trim()
   if (AI_TOPICS.includes(t)) return 'ai_news'
   if (INVESTMENT_TOPICS.includes(t)) return 'investment_news'
   if (JOB_TOPICS.includes(t)) return 'job_hire_fire'
+  if (REAL_ESTATE_TOPICS.includes(t)) return 'real_estate_news'
   return null
 }
 
@@ -28,7 +30,7 @@ const TOOLS = [
   {
     name: 'send_news',
     description:
-      'Send a single news item to the Daily News Trigger database. Call this once per news item, in rank order (1 through 10). Topic automatically routes to the correct table: trending/ai/tools/models → ai_news, startup/investment/funding/company → investment_news, hiring/layoffs/jobs/hr → job_hire_fire. Every call returns a receipt: count an item as sent ONLY when saved is true and record_id is set (saved is only true when both the story and its image were stored). code "image_failed" means the image could not be downloaded or is not a real image, so nothing was saved — generate a fresh image and resend immediately with the same rank. code "slot_taken" means that rank already holds a different story (nothing was overwritten) — resend with a rank from free_ranks. code "duplicate" means the story is already saved — skip it.',
+      'Send a single news item to the Daily News Trigger database. Call this once per news item, in rank order (1 through 10). Topic automatically routes to the correct table: trending/ai/tools/models → ai_news, startup/investment/funding/company → investment_news, hiring/layoffs/jobs/hr → job_hire_fire, realestate/property/housing/realty → real_estate_news. Every call returns a receipt: count an item as sent ONLY when saved is true and record_id is set (saved is only true when both the story and its image were stored). code "image_failed" means the image could not be downloaded or is not a real image, so nothing was saved — generate a fresh image and resend immediately with the same rank. code "slot_taken" means that rank already holds a different story (nothing was overwritten) — resend with a rank from free_ranks. code "duplicate" means the story is already saved — skip it.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -38,7 +40,7 @@ const TOOLS = [
         },
         Topic: {
           type: 'string',
-          description: `Category of the news item. Must be one of: ${ALL_VALID_TOPICS.join(', ')}. AI news: trending, ai, tools, models. Investment news: startup, investment, funding, company. Job news: hiring, layoffs, jobs, hr.`,
+          description: `Category of the news item. Must be one of: ${ALL_VALID_TOPICS.join(', ')}. AI news: trending, ai, tools, models. Investment news: startup, investment, funding, company. Job news: hiring, layoffs, jobs, hr. Real estate news: realestate, property, housing, realty.`,
         },
         Title: {
           type: 'string',
@@ -522,7 +524,7 @@ export async function GET() {
   return NextResponse.json({
     name: SERVER_INFO.name,
     version: SERVER_INFO.version,
-    description: 'MCP server for Daily News Trigger — auto-routes news to ai_news, investment_news, or job_hire_fire based on Topic',
+    description: 'MCP server for Daily News Trigger — auto-routes news to ai_news, investment_news, job_hire_fire, or real_estate_news based on Topic',
     tools: TOOLS.map((t) => ({ name: t.name, description: t.description })),
   })
 }

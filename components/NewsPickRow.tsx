@@ -10,10 +10,13 @@ interface NewsPickRowProps {
   onToggle: (id: string) => void
 }
 
+// real_estate_news is included for type completeness only — the newsletter
+// picker that renders this row never fetches that table.
 const SOURCE_COLOR: Record<FeedItem['source'], string> = {
   ai_news: 'bg-[--accent-purple]/15 text-[--accent-purple-mid]',
   investment_news: 'bg-[--accent-blue]/15 text-[--accent-blue-light]',
   job_hire_fire: 'bg-[--accent-amber]/15 text-[--accent-amber-light]',
+  real_estate_news: 'bg-[--accent-emerald]/15 text-[--accent-emerald-light]',
 }
 
 // Compact selectable row — keeps a list of ~450 stories usable for picking newsletter items
